@@ -255,7 +255,7 @@ holdPosT:0,repoC:0,lastDmgT:0,dmgTH:[],
 // NEW: ability usage tracking
 dashCount:0,dashTimestamps:[],dashDirections:[],
 grenadeCount:0,grenadePositions:[],grenadeTimestamps:[],
-
+meleeCount:0,meleeHits:0,meleeTimestamps:[],meleeAfterDash:0,
 sprintTime:0,heatOverheatCount:0,
 dashWhenLowHp:0,dashWhenHighHp:0,
 grenadesAtGroups:0,grenadesAtSingles:0,
@@ -1483,6 +1483,7 @@ function mkClone(){
   cl.cloneAmmo=30;cl.cloneMaxAmmo=30; // same mag
   cl.cloneHeat=0;cl.cloneOverheated=false;
   cl.cloneReloading=false;cl.cloneReloadTimer=0;
+  cl.cloneMeleeCd=999;cl.cloneMeleeCD_MAX=999;cl.cloneMeleeDmg=0; // melee removed, dummies prevent undefined
   // Learning state
   cl.adaptPhase=0;cl.adaptTimer=0;
   cl.learnRate=Math.min(1,Sim.simCount/1500); // faster threshold
