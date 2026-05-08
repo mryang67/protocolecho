@@ -263,6 +263,19 @@ grenadesAtGroups:0,grenadesAtSingles:0,
 abilityComboPatterns:[],lastAbilityTime:0,lastAbilityType:'',
 // diagnostic response per enemy type
 typeKills:{},typeDmgTaken:{},typeEngageDist:{},typeReaction:{},
+// Per-wave diagnostic data
+waveData:{},        // {waveN: {shotsF, shotsH, dashesUsed, nadesUsed, dmgTaken, kills, ttk:[], aimDeltaPerShot:[], movePattern:[], engagePriority:[]}}
+currentWave:-1,
+// Target priority tracking
+lastTargetId:null, targetSwitches:0, firstTargetType:'',
+// Pressure response
+shotsUnderMulti:0, accuracyUnderMulti:0, // when 3+ enemies alive
+dashesDefensive:0, dashesOffensive:0,    // dash toward vs away from enemies
+nadesAtGroups:0, nadesAtSingles:0,
+// Time to kill per enemy
+ttkByType:{},       // {type: [ttk values]}
+// Aim tracking quality
+aimCorrectionSpeed:[], // how fast player corrects after missing
 // derived
 playstyle:'balanced',dodgePattern:'none',aimProfile:'avg',combatRhythm:0,
 weaknesses:[],strengths:[],
@@ -336,7 +349,16 @@ function recDash(){
   A.dashCount++;A.dashTimestamps.push(clock.elapsedTime);
   A.dashDirections.push(yaw);
   if(hp<40)A.dashWhenLowHp++;else A.dashWhenHighHp++;
-  // Combo detection
+  // Offensive vs defensive: check if dashing toward or away from nearest enemy
+  let nearest=null,nd=Infinity;
+  enemies.forEach(e=>{if(e.hp<=0)return;const d=e.mesh.position.distanceTo(cam.position);if(d<nd){nd=d;nearest=e;}});
+  if(nearest){
+    const toE=new THREE.Vector3().subVectors(nearest.mesh.position,cam.position).normalize();
+    const dashFwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+    if(toE.dot(dashFwd)>0.3)A.dashesOffensive++;else A.dashesDefensive++;
+  }
+  // Per-wave
+  const wd=A.waveData[A.currentWave];if(wd)wd.dashUsed++;
   const now=clock.elapsedTime;
   if(now-A.lastAbilityTime<1.5)A.abilityComboPatterns.push(A.lastAbilityType+'>dash');
   A.lastAbilityTime=now;A.lastAbilityType='dash';
@@ -344,7 +366,9 @@ function recDash(){
 function recNade(pos,nearCount){
   A.grenadeCount++;A.grenadeTimestamps.push(clock.elapsedTime);
   A.grenadePositions.push({x:pos.x,z:pos.z});
-  if(nearCount>1)A.grenadesAtGroups++;else A.grenadesAtSingles++;
+  if(nearCount>1){A.grenadesAtGroups++;A.nadesAtGroups++;}else{A.grenadesAtSingles++;A.nadesAtSingles++;}
+  // Per-wave
+  const wd=A.waveData[A.currentWave];if(wd)wd.nadeUsed++;
   const now=clock.elapsedTime;
   if(now-A.lastAbilityTime<1.5)A.abilityComboPatterns.push(A.lastAbilityType+'>nade');
   A.lastAbilityTime=now;A.lastAbilityType='nade';
@@ -436,6 +460,33 @@ function compA(){
   
   if(A.coverScore>tt*0.3)A.strengths.push('tactical');
   if(A.grenadeCount>4&&A.grenadesAtGroups>A.grenadeCount*0.5)A.strengths.push('smart-nades');
+  // === WAVE-DERIVED DIAGNOSTICS ===
+  // Per-wave accuracy analysis
+  Object.entries(A.waveData).forEach(([wn,wd])=>{
+    if(wd.shotsF>0)wd.accuracy=wd.shotsH/wd.shotsF*100;
+    if(wd.ttk.length>0)wd.avgTTK=wd.ttk.reduce((s,v)=>s+v,0)/wd.ttk.length;
+  });
+  // Target priority: what they engage first
+  const firstTargets=Object.values(A.waveData).map(w=>w.firstTarget).filter(Boolean);
+  if(firstTargets.length>0){
+    const counts={};firstTargets.forEach(t=>counts[t]=(counts[t]||0)+1);
+    A.targetPriority=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+  }
+  // TTK vulnerability: which type takes longest to kill?
+  let slowestTTK='',slowestAvg=0;
+  Object.entries(A.ttkByType).forEach(([type,ttks])=>{
+    const avg=ttks.reduce((s,v)=>s+v,0)/ttks.length;
+    if(avg>slowestAvg){slowestAvg=avg;slowestTTK=type;}
+  });
+  if(slowestTTK)A.weaknesses.push('slow-vs-'+slowestTTK);
+  // Dash pattern: offensive vs defensive
+  if(A.dashesDefensive>A.dashesOffensive*2)A.weaknesses.push('only-defensive-dash');
+  if(A.dashesOffensive>A.dashesDefensive*2)A.strengths.push('aggressive-dasher');
+  // Multi-target pressure response
+  if(A.shotsUnderMulti>10&&A.accuracyUnderMulti/A.shotsUnderMulti<0.2)A.weaknesses.push('poor-under-pressure');
+  // Target switching
+  if(A.targetSwitches>A.shotsFired*0.3)A.weaknesses.push('target-indecisive');
+  else if(A.targetSwitches<A.shotsFired*0.05&&A.shotsFired>20)A.strengths.push('focus-fire');
   // Clusters
   if(A.posH.length>50){
     const k=4;let ctrs=A.posH.slice(0,k).map(p=>({x:p.x,z:p.z}));
@@ -576,9 +627,16 @@ const Sim={
       dashBias:A.dashWhenLowHp/(Math.max(A.dashWhenHighHp,1)),
       combos:A.abilityComboPatterns,meleeAfterDash:A.meleeAfterDash,
       // Diagnostic response data per enemy type
-      typeVulnerability:A.typeDmgTaken,  // which types hurt the player most
-      typeKillSpeed:A.typeReaction,       // how fast player reacts to each type
-      typeEngageDist:A.typeEngageDist,    // engagement range per type
+      typeVulnerability:A.typeDmgTaken,
+      typeKillSpeed:A.typeReaction,
+      typeEngageDist:A.typeEngageDist,
+      // Wave-derived diagnostic data
+      ttkByType:A.ttkByType,
+      targetPriority:A.targetPriority||'nearest',
+      targetSwitchRate:A.targetSwitches/Math.max(A.shotsFired,1),
+      dashOffensiveRatio:A.dashesOffensive/Math.max(A.dashesOffensive+A.dashesDefensive,1),
+      pressureAccuracy:A.shotsUnderMulti>0?A.accuracyUnderMulti/A.shotsUnderMulti:0.3,
+      waveAccuracies:Object.fromEntries(Object.entries(A.waveData).map(([k,v])=>[k,v.accuracy||0])),
     };
   },
 
@@ -1434,9 +1492,30 @@ function mkClone(){
   cl.shotsFiredByClone=0;cl.shotsHitByClone=0;
   cl.lastDashTime=0;cl.lastNadeTime=0;cl.lastMeleeTime=0;
   cl.comboState='';cl.comboTimer=0;
-  // Visual
-  cl.mesh.traverse(ch=>{if(ch.isMesh&&ch.material.emissive){ch.material.emissive.set(0x00ffc8);ch.material.emissiveIntensity=0.1;ch.material.color.set(0x006655);}});
-  const gl=new THREE.PointLight(0x00ffc8,0.8,5);gl.position.y=1.5;cl.mesh.add(gl);cl.glow=gl;
+  // Visual: make clone a distinctive bright cyan warrior
+  const cloneMat=new THREE.MeshStandardMaterial({color:0x00ffc8,roughness:0.3,metalness:0.6,emissive:0x00ffc8,emissiveIntensity:0.5});
+  const cloneDarkMat=new THREE.MeshStandardMaterial({color:0x008866,roughness:0.3,metalness:0.7,emissive:0x00aa88,emissiveIntensity:0.3});
+  const cloneEyeMat=new THREE.MeshBasicMaterial({color:0xffffff});
+  cl.mesh.traverse(ch=>{
+    if(!ch.isMesh)return;
+    // Replace all materials with clone colors
+    if(ch.material.color){
+      const c=ch.material.color;
+      // Skin parts → cyan tinted
+      if(c.r>0.6&&c.g>0.5){ch.material=cloneMat.clone();ch.material.emissiveIntensity=0.3;}
+      // Dark parts → dark cyan
+      else if(c.r<0.2&&c.g<0.2){ch.material=cloneDarkMat.clone();}
+      // Body armor → bright clone color
+      else{ch.material=cloneMat.clone();}
+    }
+  });
+  // Override eyes to white
+  cl.mesh.traverse(ch=>{if(ch.isMesh&&ch.geometry.parameters&&ch.geometry.parameters.radius&&ch.geometry.parameters.radius<0.04)ch.material=cloneEyeMat;});
+  // Strong glow
+  const gl=new THREE.PointLight(0x00ffc8,3,15);gl.position.y=1.2;cl.mesh.add(gl);cl.glow=gl;
+  // Halo ring at feet
+  const halo=new THREE.Mesh(new THREE.RingGeometry(1.2,1.5,24),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:0.15,side:THREE.DoubleSide}));
+  halo.rotation.x=-Math.PI/2;halo.position.y=0.05;cl.mesh.add(halo);
   return cl;
 }
 
@@ -1761,6 +1840,13 @@ function playerShoot(){
         const isH=rayY>1.8;
         const dmg=isH?55:25;e.hp-=dmg;hit=true;hs=isH;hd=projH;A.dmgD+=dmg;
         showHitMarker(isH);
+        // Target priority tracking
+        if(e.id!==A.lastTargetId){A.targetSwitches++;A.lastTargetId=e.id;}
+        const wd2=A.waveData[A.currentWave];
+        if(wd2&&!wd2.firstTarget)wd2.firstTarget=e.type;
+        // Pressure tracking: accuracy when 3+ enemies alive
+        const aliveCount=enemies.filter(en=>en.hp>0).length;
+        if(aliveCount>=3){A.shotsUnderMulti++;A.accuracyUnderMulti++;}
         if(!e.firstEng){e.firstEng=true;A.reacT.push(clock.elapsedTime-e.spawnTime);
           if(!A.typeReaction[e.type])A.typeReaction[e.type]=[];A.typeReaction[e.type].push(clock.elapsedTime-e.spawnTime);
           if(!A.typeEngageDist[e.type])A.typeEngageDist[e.type]=[];A.typeEngageDist[e.type].push(hDist);}
@@ -1774,7 +1860,11 @@ function playerShoot(){
       }
     }
   });
-  recShot(hit,hs,hd);if(ammo<=0)reload();
+  recShot(hit,hs,hd);
+  // Per-wave diagnostic tracking
+  const wd=A.waveData[A.currentWave];
+  if(wd){wd.shotsF++;if(hit)wd.shotsH++;}
+  if(ammo<=0)reload();
   pitch+=0.01;wRecoil=1;
 }
 
@@ -1819,6 +1909,8 @@ function doMelee(){return;}
 
 function playerDmg(dmg,fromPos){
   hp=Math.max(0,hp-dmg);A.dmgT+=dmg;
+  // Per-wave damage tracking
+  const wd=A.waveData[A.currentWave];if(wd)wd.dmgTaken+=dmg;
   const ang=Math.atan2(fromPos.z-cam.position.z,fromPos.x-cam.position.x)-yaw;
   A.dmgTH.push({t:clock.elapsedTime,amt:dmg,px:cam.position.x,pz:cam.position.z,a:ang});
   A.lastDmgT=clock.elapsedTime;
@@ -1836,6 +1928,13 @@ function killE(e){
   score+=(typeScores[e.type]||100);
   A.killPos.push({x:cam.position.x,z:cam.position.z});
   A.typeKills[e.type]=(A.typeKills[e.type]||0)+1;
+  // Time-to-kill tracking
+  const ttk=clock.elapsedTime-e.spawnTime;
+  if(!A.ttkByType[e.type])A.ttkByType[e.type]=[];
+  A.ttkByType[e.type].push(ttk);
+  // Per-wave kill tracking
+  const wd=A.waveData[A.currentWave];
+  if(wd){wd.kills++;wd.ttk.push(ttk);}
   document.getElementById('killC').textContent=`${kills} ELIMINATED`;
   document.getElementById('scoreD').textContent=score;
   spawnDeathP(e.mesh.position.clone());scene.remove(e.mesh);
@@ -1939,12 +2038,22 @@ const wCfg=[
   {e:[{t:'charger',n:2},{t:'strafer',n:2},{t:'flanker',n:2},{t:'rusher',n:2}], msg:'SCAN 6 — FULL DIAGNOSTIC'},
 ];
 
+let enemyIdCounter=0;
 function startWave(n){
-  wave=n;if(n>=wCfg.length){waveActive=true;compA();Sim.buildPlayerModel();Sim.start();showCloneWarn();return;}
+  wave=n;A.currentWave=n;
+  if(n>=wCfg.length){waveActive=true;compA();Sim.buildPlayerModel();Sim.start();showCloneWarn();return;}
+  // Init wave diagnostic data
+  A.waveData[n]={shotsF:0,shotsH:0,dashUsed:0,nadeUsed:0,dmgTaken:0,kills:0,ttk:[],
+    startTime:clock.elapsedTime,accuracy:0,firstTarget:'',targetSwitches:0};
   announce(wCfg[n].msg);document.getElementById('waveT').textContent=`SCAN ${n+1}/6`;
   if(n>=1&&!Sim.running){compA();Sim.buildPlayerModel();Sim.start();}
   else if(n>=1&&Sim.running){compA();Sim.buildPlayerModel();}
-  setTimeout(()=>{wCfg[n].e.forEach(g=>{for(let i=0;i<g.n;i++){const a=Math.random()*Math.PI*2,d=16+Math.random()*16;enemies.push(mkEnemy(Math.cos(a)*d,Math.sin(a)*d,g.t));}});waveActive=false;},2000);
+  setTimeout(()=>{wCfg[n].e.forEach(g=>{for(let i=0;i<g.n;i++){
+    const a=Math.random()*Math.PI*2,d=16+Math.random()*16;
+    const e=mkEnemy(Math.cos(a)*d,Math.sin(a)*d,g.t);
+    e.id=++enemyIdCounter; // unique ID for target tracking
+    enemies.push(e);
+  }});waveActive=false;},2000);
 }
 function announce(m){const e=document.getElementById('waveAnn');e.textContent=m;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2500);}
 function showCloneWarn(){
@@ -1982,11 +2091,17 @@ function showAnalytics(){
     <div class="sr"><span class="sl">Overheats</span><span class="sv">${a.heatOverheatCount}</span></div>
     </div>
     <div class="sg"><h3>ABILITIES</h3>
-    <div class="sr"><span class="sl">Dashes</span><span class="sv">${a.dashCount} (${a.dashWhenLowHp} defensive)</span></div>
+    <div class="sr"><span class="sl">Dashes</span><span class="sv">${a.dashCount} (${a.dashesOffensive||0} offensive / ${a.dashesDefensive||0} defensive)</span></div>
     <div class="sr"><span class="sl">Grenades</span><span class="sv">${a.grenadeCount} (${a.grenadesAtGroups} at groups)</span></div>
-    <div class="sr"><span class="sl">Melee Attacks</span><span class="sv">${a.meleeCount} (${a.meleeHits} hit)</span></div>
-    <div class="sr"><span class="sl">Dash→Melee Combos</span><span class="sv d">${a.meleeAfterDash}</span></div>
-    <div class="sr"><span class="sl">Ability Combos</span><span class="sv">${a.abilityComboPatterns.length}</span></div>
+    <div class="sr"><span class="sl">Combos</span><span class="sv">${a.abilityComboPatterns.length}</span></div>
+    </div>
+    <div class="sg"><h3>DIAGNOSTIC RESULTS PER SCAN</h3>
+    ${Object.entries(a.waveData).map(([wn,wd])=>`
+    <div class="sr"><span class="sl">Scan ${parseInt(wn)+1}</span><span class="sv">${wd.accuracy?wd.accuracy.toFixed(0):'?'}% acc | ${wd.kills} kills | ${wd.dmgTaken} dmg taken | ${wd.dashUsed}D ${wd.nadeUsed}G${wd.avgTTK?' | TTK '+wd.avgTTK.toFixed(1)+'s':''}</span></div>
+    `).join('')}
+    <div class="sr"><span class="sl">Target Priority</span><span class="sv d">${(a.targetPriority||'UNKNOWN').toUpperCase()}</span></div>
+    <div class="sr"><span class="sl">Target Switches</span><span class="sv">${a.targetSwitches} (${(a.targetSwitches/Math.max(a.shotsFired,1)*100).toFixed(0)}% of shots)</span></div>
+    <div class="sr"><span class="sl">TTK Weakness</span><span class="sv d">${a.weaknesses.find(w=>w.startsWith('slow-vs-'))?.replace('slow-vs-','').toUpperCase()||'NONE'}</span></div>
     </div>
     <div class="sg"><h3>ENGAGEMENT</h3>
     <div class="sr"><span class="sl">Range</span><span class="sv">${a.avgEngDist.toFixed(1)}m (${a.prefRange.toUpperCase()})</span></div>
