@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>ECHO PROTOCOL v3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace}
+#C{width:100%;height:100%;display:block;position:fixed;top:0;left:0}
+#hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;display:none}
+#cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px}
+#cross::before,#cross::after{content:'';position:absolute;background:rgba(0,255,200,0.8)}
+#cross::before{width:1.5px;height:100%;left:50%;transform:translateX(-50%)}
+#cross::after{width:100%;height:1.5px;top:50%;transform:translateY(-50%)}
+#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:3px;background:rgba(0,255,200,0.9);border-radius:50%}
+#hpBar{position:absolute;bottom:95px;left:16px;width:160px;height:8px;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,200,0.25);border-radius:2px}
+#hpFill{height:100%;background:linear-gradient(90deg,#ff0044,#ff4400,#00ff88);width:100%;transition:width 0.15s;border-radius:1px}
+#hpText{position:absolute;bottom:106px;left:16px;color:#00ffc8;font-size:9px;letter-spacing:1px;text-shadow:0 0 4px rgba(0,255,200,0.3)}
+#ammoD{position:absolute;bottom:95px;right:16px;color:#00ffc8;font-size:18px;text-align:right;text-shadow:0 0 6px rgba(0,255,200,0.3)}
+#ammoL{font-size:8px;color:rgba(0,255,200,0.4);letter-spacing:1px}
+/* Heat bar */
+#heatBar{position:absolute;bottom:82px;right:16px;width:100px;height:4px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,100,0,0.2);border-radius:1px}
+#heatFill{height:100%;width:0%;background:linear-gradient(90deg,#ff6600,#ff0044);transition:width 0.1s;border-radius:1px}
+#heatText{position:absolute;bottom:88px;right:16px;font-size:7px;color:rgba(255,100,0,0.5);letter-spacing:1px;display:none}
+/* Abilities */
+#abilities{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+.ability{width:36px;height:36px;border:1px solid rgba(0,255,200,0.2);border-radius:4px;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;position:relative}
+.ability .cd{position:absolute;bottom:0;left:0;width:100%;height:0%;background:rgba(0,0,0,0.7);border-radius:0 0 3px 3px;transition:height 0.1s}
+.ability .icon{font-size:14px;color:rgba(0,255,200,0.7);z-index:1}
+.ability .key{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:7px;color:rgba(0,255,200,0.3)}
+#dashAb .icon{color:rgba(0,180,255,0.8)}
+#grenadeAb .icon{color:rgba(255,150,0,0.8)}
+#meleeAb .icon{color:rgba(255,50,100,0.8)}
+
+#waveInfo{position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#00ffc8;font-size:12px;text-align:center;letter-spacing:2px;text-shadow:0 0 6px rgba(0,255,200,0.3)}
+#killC{font-size:9px;color:rgba(0,255,200,0.4);margin-top:2px}
+#scoreD{position:absolute;top:14px;right:14px;color:#00ffc8;font-size:14px;text-shadow:0 0 6px rgba(0,255,200,0.3)}
+#minimap{position:absolute;top:14px;left:14px;width:80px;height:80px;background:rgba(0,0,0,0.45);border:1px solid rgba(0,255,200,0.15);border-radius:3px;overflow:hidden}
+#mmC{width:100%;height:100%}
+#simHud{position:absolute;bottom:145px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;opacity:0;transition:opacity 0.4s}
+#simCount{color:rgba(255,0,68,0.7);font-size:9px;letter-spacing:1px}
+#simBar{width:140px;height:3px;background:rgba(255,0,68,0.1);margin:3px auto;border-radius:2px}
+#simFill{height:100%;width:0%;background:linear-gradient(90deg,#ff0044,#ff6600,#00ffc8);transition:width 0.3s;border-radius:2px}
+#simPhase{color:rgba(0,255,200,0.5);font-size:8px;letter-spacing:1px}
+#cloneIQ{position:absolute;top:48px;left:50%;transform:translateX(-50%);text-align:center;opacity:0;transition:opacity 0.3s;pointer-events:none}
+#iqText{color:rgba(255,0,68,0.6);font-size:8px;letter-spacing:2px}
+#iqBar{width:100px;height:2px;background:rgba(255,0,68,0.08);margin:2px auto;border-radius:1px}
+#iqFill{height:100%;width:0%;background:#ff0044;transition:width 0.4s;border-radius:1px}
+#versText{font-size:7px;color:rgba(255,0,68,0.4);letter-spacing:1px}
+
+#dmgOv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9;opacity:0;transition:opacity 0.1s}
+#vig{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.5));display:none}
+#scan{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:7;opacity:0.025;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,200,0.06) 2px,rgba(0,255,200,0.06) 4px);display:none}
+#dashOv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;opacity:0;transition:opacity 0.15s;background:radial-gradient(ellipse at center,rgba(0,180,255,0.08),transparent 60%)}
+
+#ctrls{position:fixed;bottom:0;left:0;width:100%;height:155px;pointer-events:auto;z-index:20;display:none}
+#mJoy{position:absolute;bottom:16px;left:22px;width:110px;height:110px;background:rgba(0,255,200,0.05);border:1.5px solid rgba(0,255,200,0.12);border-radius:50%}
+#mStk{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;background:rgba(0,255,200,0.2);border:1.5px solid rgba(0,255,200,0.35);border-radius:50%}
+#aim{position:absolute;top:0;left:0;width:100%;height:calc(100% - 155px);z-index:15;pointer-events:auto;display:none}
+#fireBtn{position:absolute;bottom:24px;right:24px;width:72px;height:72px;background:rgba(255,50,50,0.1);border:1.5px solid rgba(255,50,50,0.35);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(255,80,80,0.65);font-size:8px;letter-spacing:1px}
+#rldBtn{position:absolute;bottom:24px;right:110px;width:42px;height:42px;background:rgba(0,255,200,0.06);border:1px solid rgba(0,255,200,0.2);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(0,255,200,0.5);font-size:7px}
+#dashBtn{position:absolute;bottom:24px;right:165px;width:42px;height:42px;background:rgba(0,150,255,0.08);border:1px solid rgba(0,150,255,0.25);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(0,180,255,0.6);font-size:7px}
+#nadeBtn{position:absolute;bottom:75px;right:24px;width:42px;height:42px;background:rgba(255,150,0,0.08);border:1px solid rgba(255,150,0,0.25);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(255,150,0,0.6);font-size:7px}
+#meleeBtn{position:absolute;bottom:75px;right:78px;width:42px;height:42px;background:rgba(255,50,100,0.08);border:1px solid rgba(255,50,100,0.25);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(255,50,100,0.6);font-size:7px}
+
+.screen{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000}
+#titleScr{background:radial-gradient(ellipse at 20% 30%,#0a1218,#000 70%)}
+.title{font-size:clamp(30px,7vw,50px);color:#00ffc8;letter-spacing:12px;text-shadow:0 0 40px rgba(0,255,200,0.35),0 0 80px rgba(0,255,200,0.12);margin-bottom:2px}
+.sub{font-size:clamp(9px,2vw,12px);color:rgba(0,255,200,0.35);letter-spacing:8px;margin-bottom:30px}
+.desc{color:rgba(0,255,200,0.2);font-size:8px;margin-bottom:22px;text-align:center;padding:0 28px;line-height:1.8;letter-spacing:1px;max-width:340px}
+.btn{padding:12px 34px;background:transparent;border:1px solid rgba(0,255,200,0.35);color:#00ffc8;font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;cursor:pointer;pointer-events:auto;transition:all 0.3s;margin:4px}
+.btn:active{background:rgba(0,255,200,0.1);box-shadow:0 0 16px rgba(0,255,200,0.15)}
+.btn-r{border-color:rgba(255,0,68,0.35);color:#ff0044}
+.btn-r:active{background:rgba(255,0,68,0.1)}
+
+#waveAnn{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;color:#00ffc8;font-size:clamp(20px,4.5vw,36px);letter-spacing:5px;text-shadow:0 0 20px rgba(0,255,200,0.35);opacity:0;pointer-events:none;transition:opacity 0.5s;text-align:center}
+#cloneWarn{position:fixed;top:36%;left:50%;transform:translate(-50%,-50%);z-index:50;text-align:center;opacity:0;pointer-events:none;transition:opacity 0.7s}
+#cloneWarn h2{color:#ff0044;font-size:clamp(16px,3.5vw,28px);letter-spacing:5px;text-shadow:0 0 16px rgba(255,0,68,0.35);margin-bottom:6px}
+#cloneWarn p{color:rgba(255,0,68,0.5);font-size:10px;letter-spacing:2px;line-height:1.7}
+
+#analyticScr{display:none;overflow-y:auto;padding:14px;background:rgba(0,0,0,0.97)}
+#analyticScr h2{color:#00ffc8;font-size:15px;letter-spacing:4px;margin-bottom:14px;text-align:center}
+.sg{margin-bottom:10px;padding:8px 10px;background:rgba(0,255,200,0.015);border:1px solid rgba(0,255,200,0.06);border-radius:3px}
+.sg h3{color:rgba(0,255,200,0.55);font-size:9px;letter-spacing:2px;margin-bottom:5px}
+.sr{display:flex;justify-content:space-between;padding:1.5px 0;font-size:9px}
+.sl{color:rgba(0,255,200,0.35)}
+.sv{color:#00ffc8}
+.sv.d{color:#ff0044}
+
+#resultScr{display:none}
+#rTitle{color:#00ffc8;font-size:20px;letter-spacing:5px;margin-bottom:6px}
+#rSub{color:rgba(0,255,200,0.4);font-size:10px;margin-bottom:6px;text-align:center;padding:0 18px;line-height:1.5}
+#rStats{color:rgba(0,255,200,0.25);font-size:8px;margin-bottom:20px;text-align:center;line-height:1.7;white-space:pre-line}
+/* Training Visualization */
+#trainPanel{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:110;background:#000;flex-direction:column;align-items:center;justify-content:center}
+#trainCanvas{border:1px solid rgba(0,255,200,0.12);border-radius:4px;background:#050510;max-width:95vw;max-height:60vh}
+#trainStats{color:rgba(0,255,200,0.5);font-size:8px;letter-spacing:1px;margin-top:10px;text-align:center;line-height:1.8}
+#trainStats .val{color:#00ffc8}
+#trainStats .danger{color:#ff0044}
+#trainTitle{color:#00ffc8;font-size:14px;letter-spacing:4px;margin-bottom:10px;text-shadow:0 0 12px rgba(0,255,200,0.3)}
+#trainLegend{display:flex;gap:12px;margin-top:6px;justify-content:center;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:7px;color:rgba(0,255,200,0.4)}
+.legend-dot{width:6px;height:6px;border-radius:50%}
+#trainLog{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:rgba(255,0,68,0.5);font-size:8px;letter-spacing:1px;text-align:center;max-width:300px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="screen" id="titleScr">
+  <div class="title">ECHO</div>
+  <div class="sub">P R O T O C O L &nbsp; v 7</div>
+  <div class="desc">
+    DASH. GRENADE. MELEE. EVERY TOOL TRACKED.<br>
+    YOUR ECHO HAS YOUR EXACT STATS AND ABILITIES.<br>
+    IT FIGHTS ITSELF ACROSS GENERATIONS.<br>
+    ONLY THE STRONGEST GENES SURVIVE.<br>
+    WATCH IT EVOLVE. THEN TRY TO SURVIVE.
+  </div>
+  <button class="btn" onclick="startGame()">INITIATE</button>
+  <button class="btn btn-r" onclick="openTraining()" style="font-size:10px;padding:10px 28px">WATCH TRAINING (1x SPEED)</button>
+</div>
+
+<div id="trainPanel">
+  <div id="trainTitle">CLONE TRAINING — LIVE 1x SPEED</div>
+  <canvas id="trainCanvas" width="380" height="380"></canvas>
+  <div id="trainStats">
+    SIMS: <span class="val" id="trSims">0</span> &nbsp;|&nbsp;
+    GEN: <span class="val" id="trGen">0</span> &nbsp;|&nbsp;
+    IQ: <span class="danger" id="trIQ">0</span> &nbsp;|&nbsp;
+    VERS: <span class="danger" id="trVers">0</span>/20<br>
+    PHASE: <span class="val" id="trPhase">DORMANT</span> &nbsp;|&nbsp;
+    BEST: <span class="val" id="trBest">—</span> &nbsp;|&nbsp;
+    WIN RATE: <span class="danger" id="trWinRate">0%</span><br>
+    OPPONENT: <span class="danger" id="trOpponent">—</span> &nbsp;|&nbsp;
+    FIGHT: <span class="val" id="trFight">0</span> &nbsp;|&nbsp;
+    GvG: <span class="danger" id="trGvG">0</span><br>
+    DYNASTY: <span class="val" id="trDynasty">0</span> &nbsp;|&nbsp;
+    ELITE POOL: <span class="val" id="trElite">0</span> &nbsp;|&nbsp;
+    ARMS RACE: <span class="danger" id="trArms">—</span>
+  </div>
+  <div id="trainLegend">
+    <div class="legend-item"><div class="legend-dot" style="background:#00ffc8"></div>CLONE</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff0044"></div>OPPONENT</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff660088"></div>GRENADE</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffffff22"></div>COVER</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#aa00ff"></div>SELF-PLAY</div>
+  </div>
+  <div id="trainLog"></div>
+  <button class="btn" onclick="closeTraining()" style="margin-top:12px;pointer-events:auto;font-size:10px">BACK</button>
+</div>
+
+<div id="hud">
+  <div id="cross"><div class="dot"></div></div>
+  <div id="hpText">SHIELD 100</div>
+  <div id="hpBar"><div id="hpFill"></div></div>
+  <div id="ammoD"><div id="ammoL">ROUNDS</div><span id="ammoC">30</span><span style="font-size:11px;opacity:0.4"> / 30</span></div>
+  <div id="heatBar"><div id="heatFill"></div></div>
+  <div id="heatText">OVERHEAT</div>
+  <div id="abilities">
+    <div class="ability" id="dashAb"><div class="cd" id="dashCd"></div><div class="icon">⚡</div><div class="key">DASH</div></div>
+    <div class="ability" id="grenadeAb"><div class="cd" id="nadeCd"></div><div class="icon">💥</div><div class="key">NADE</div></div>
+    <div class="ability" id="meleeAb"><div class="cd" id="meleeCd"></div><div class="icon">⚔</div><div class="key">MELEE</div></div>
+  </div>
+  <div id="waveInfo"><span id="waveT">WAVE 1</span><div id="killC">0 ELIMINATED</div></div>
+  <div id="scoreD">0</div>
+  <div id="minimap"><canvas id="mmC" width="80" height="80"></canvas></div>
+  <div id="simHud"><div id="simCount">SIMS: 0</div><div id="simBar"><div id="simFill"></div></div><div id="simPhase">DORMANT</div></div>
+  <div id="cloneIQ"><div id="iqText">CLONE IQ: 0</div><div id="iqBar"><div id="iqFill"></div></div><div id="versText">VERSATILITY: 0/20</div></div>
+</div>
+
+<div id="dmgOv"></div><div id="dashOv"></div><div id="vig"></div><div id="scan"></div>
+<div id="waveAnn"></div>
+<div id="cloneWarn"><h2>ECHO DEPLOYED</h2><p>SAME HP. SAME DAMAGE. SAME ABILITIES.<br>EVOLVED THROUGH SELF-PLAY ACROSS GENERATIONS<br>THE STRONGEST DYNASTY GENOME HUNTS YOU NOW.</p></div>
+
+<div id="ctrls">
+  <div id="mJoy"><div id="mStk"></div></div>
+  <div id="fireBtn">FIRE</div>
+  <div id="rldBtn">R</div>
+  <div id="dashBtn">DSH</div>
+  <div id="nadeBtn">NAD</div>
+  <div id="meleeBtn">MEL</div>
+</div>
+<div id="aim"></div>
+
+<div class="screen" id="analyticScr">
+  <h2>DEEP PATTERN ANALYSIS</h2>
+  <div id="analyticContent" style="width:100%;max-width:380px"></div>
+  <button class="btn btn-r" onclick="launchClone()" style="margin-top:12px;pointer-events:auto">DEPLOY ECHO</button>
+</div>
+<div class="screen" id="resultScr">
+  <div id="rTitle"></div><div id="rSub"></div><div id="rStats"></div>
+  <button class="btn" onclick="location.reload()" style="pointer-events:auto">REPLAY</button>
+</div>
+
+<canvas id="C"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ================================================================
+// ENGINE
+// ================================================================
+const canvas=document.getElementById('C');
+const R=new THREE.WebGLRenderer({canvas,antialias:true});
+R.setSize(innerWidth,innerHeight);R.setPixelRatio(Math.min(devicePixelRatio,2));
+R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=0.7;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x06060e);scene.fog=new THREE.FogExp2(0x06060e,0.012);
+const cam=new THREE.PerspectiveCamera(73,innerWidth/innerHeight,0.1,200);cam.position.set(0,1.7,0);
+const clock=new THREE.Clock();
+let GS='title',hp=100,ammo=30,MX=30,score=0,kills=0,wave=-1;
+let enemies=[],tParts=[],fObjs=[],pickups=[];
+let cloneActive=false,reloading=false,waveActive=false,waveCd=0;
+let yaw=0,pitch=0,wBob=0,wRecoil=0,weaponG;
+let lastP=new THREE.Vector3(0,1.7,0),lastY=0,lastPi=0,lastST=0,fc=0;
+// Mechanics state
+let heat=0,overheated=false; // weapon heat 0-100
+let dashCd=0,dashActive=false,dashDir=new THREE.Vector3(),dashTimer=0; // dash
+const DASH_CD=3,DASH_DUR=0.15,DASH_SPD=35;
+let nadeCd=0,grenades=[]; // grenades
+const NADE_CD=5;
+let meleeCd=0; // melee
+const MELEE_CD=2,MELEE_RANGE=3.5,MELEE_DMG=60;
+let sprintActive=false;
+
+// ================================================================
+// ANALYTICS (90+ metrics)
+// ================================================================
+const A={startTime:0,
+posH:[],velH:[],accH:[],dist:0,avgSpd:0,maxSpd:0,minSpdNZ:999,
+tMove:0,tStill:0,sL:0,sR:0,fwdT:0,bwdT:0,
+dirChg:0,lastMA:0,mEntropy:0,avgDirDt:0,dirChgT:[],
+cornerT:0,centerT:0,sprintBursts:0,microAdj:0,
+movePred:0,posClusters:[],
+aimH:[],aimVH:[],avgAimSpd:0,maxAimSpd:0,
+hBias:0,vBias:0,aimStab:0,aimSnaps:0,
+aimCorrAfterMiss:[],aimTrackSmooth:0,
+aimHeatmap:{},
+shotsFired:0,shotsHit:0,acc:0,heads:0,bodyH:0,hsRate:0,
+shotT:[],burstL:[],avgBurst:0,tBetweenBursts:[],avgTBS:0,
+frUnderP:0,frRelax:0,reloadT:[],panicRld:0,tacRld:0,
+dmgD:0,dmgT:0,dps:0,
+engDist:[],avgEngDist:0,prefRange:'mid',
+killPos:[],engAngles:[],
+reacT:[],avgReac:0,fastReac:999,slowReac:0,
+posHM:{},advC:0,retC:0,aggScore:0,threatResp:'balanced',
+hpWhenAgg:0,hpWhenDef:0,coverScore:0,openRatio:0,
+holdPosT:0,repoC:0,lastDmgT:0,dmgTH:[],
+// NEW: ability usage tracking
+dashCount:0,dashTimestamps:[],dashDirections:[],
+grenadeCount:0,grenadePositions:[],grenadeTimestamps:[],
+meleeCount:0,meleeHits:0,meleeTimestamps:[],
+sprintTime:0,heatOverheatCount:0,
+dashWhenLowHp:0,dashWhenHighHp:0,
+grenadesAtGroups:0,grenadesAtSingles:0,
+meleeAfterDash:0,
+abilityComboPatterns:[],lastAbilityTime:0,lastAbilityType:'',
+// derived
+playstyle:'balanced',dodgePattern:'none',aimProfile:'avg',combatRhythm:0,
+weaknesses:[],strengths:[],
+};
+
+let aSampleT=0;const SR=0.1,HG=3;
+const coverPos=[[-12,2,-12],[12,2,-12],[-12,2,12],[12,2,12],[0,2,-20],[0,2,20],[-20,2,0],[20,2,0],[-8,2,0],[8,2,0],[0,2,-8],[0,2,8],[-16,2,-16],[16,2,16],[-16,2,16],[16,2,-16],[-25,2,10],[25,2,-10],[10,2,25],[-10,2,-25]];
+
+function recA(dt){
+  aSampleT+=dt;if(aSampleT<SR)return;aSampleT=0;
+  const t=clock.elapsedTime-A.startTime,px=cam.position.x,pz=cam.position.z;
+  const dx=px-lastP.x,dz=pz-lastP.z,spd=Math.sqrt(dx*dx+dz*dz)/SR;
+  const pv=A.velH.length>0?A.velH[A.velH.length-1]:{vx:0,vz:0,speed:0};
+  const vx=dx/SR,vz=dz/SR;
+  A.posH.push({t,x:px,z:pz});A.velH.push({t,speed:spd,vx,vz});
+  A.accH.push({t,ax:(vx-pv.vx)/SR,az:(vz-pv.vz)/SR});
+  A.dist+=Math.sqrt(dx*dx+dz*dz);
+  if(spd>0.3)A.tMove+=SR;else A.tStill+=SR;
+  if(spd>A.maxSpd)A.maxSpd=spd;
+  if(spd>0.3&&spd<A.minSpdNZ)A.minSpdNZ=spd;
+  const ma=Math.atan2(dz,dx),ra=ma-yaw;
+  if(Math.sin(ra)>0.25)A.sL++;if(Math.sin(ra)<-0.25)A.sR++;
+  if(Math.cos(ra)>0.25)A.fwdT+=SR;if(Math.cos(ra)<-0.25)A.bwdT+=SR;
+  if(Math.abs(ma-A.lastMA)>0.8&&spd>0.5){A.dirChg++;A.dirChgT.push(t);}
+  A.lastMA=ma;
+  if(spd>pv.speed+2)A.sprintBursts++;
+  if(spd>0.05&&spd<0.5)A.microAdj++;
+  const dfc=Math.sqrt(px*px+pz*pz);
+  if(dfc<15)A.centerT+=SR;
+  if(Math.abs(px)>30||Math.abs(pz)>30)A.cornerT+=SR;
+  const gx=Math.floor(px/HG),gz=Math.floor(pz/HG),hk=`${gx},${gz}`;
+  A.posHM[hk]=(A.posHM[hk]||0)+SR;
+  A.aimH.push({t,yaw,pitch});
+  const dY=yaw-lastY,dPi=pitch-lastPi;
+  const aSpd=Math.sqrt(dY*dY+dPi*dPi)/SR;
+  A.aimVH.push({t,dyaw:dY/SR,dpitch:dPi/SR,speed:aSpd});
+  if(aSpd>A.maxAimSpd)A.maxAimSpd=aSpd;A.hBias+=dY;A.vBias+=dPi;
+  if(aSpd>8)A.aimSnaps++;
+  if(sprintActive)A.sprintTime+=SR;
+  if(enemies.length>0){
+    let nr=null,nd=Infinity;
+    enemies.forEach(e=>{if(e.hp<=0)return;const d=e.mesh.position.distanceTo(cam.position);if(d<nd){nd=d;nr=e;}});
+    if(nr){
+      const toE=new THREE.Vector3().subVectors(nr.mesh.position,cam.position).normalize();
+      const md=new THREE.Vector3(dx,0,dz).normalize();
+      const dot=toE.dot(md);
+      if(dot>0.25)A.advC++;if(dot<-0.25)A.retC++;
+      if(coverPos.some(p=>Math.sqrt((px-p[0])**2+(pz-p[2])**2)<3))A.coverScore+=SR;
+    }
+  }
+  if(A.posH.length>20){
+    const rec=A.posH.slice(-20),cx=rec.reduce((s,p)=>s+p.x,0)/20,cz=rec.reduce((s,p)=>s+p.z,0)/20;
+    if(rec.reduce((s,p)=>s+Math.sqrt((p.x-cx)**2+(p.z-cz)**2),0)/20<2)A.holdPosT+=SR;
+    else A.repoC++;
+  }
+  lastP.set(px,1.7,pz);lastY=yaw;lastPi=pitch;
+}
+
+function recShot(hit,hs,dist){
+  A.shotsFired++;const now=clock.elapsedTime;A.shotT.push(now);
+  if(hit){A.shotsHit++;if(hs)A.heads++;else A.bodyH++;}
+  else if(A.aimH.length>2){const p=A.aimH[A.aimH.length-2];A.aimCorrAfterMiss.push({dy:yaw-p.yaw,dp:pitch-p.pitch});}
+  A.engDist.push(dist);
+  if(lastST>0){const gap=now-lastST;if(gap<0.25){if(!A.burstL.length||A.tBetweenBursts.length>=A.burstL.length)A.burstL.push(2);else A.burstL[A.burstL.length-1]++;}else if(gap>0.5)A.tBetweenBursts.push(gap);}
+  if(hp<40&&A.shotT.length>1)A.frUnderP=(A.frUnderP*0.9)+(1/(now-lastST||1))*0.1;
+  else if(hp>70&&A.shotT.length>1)A.frRelax=(A.frRelax*0.9)+(1/Math.max(now-lastST,0.01))*0.1;
+  lastST=now;
+}
+
+function recDash(){
+  A.dashCount++;A.dashTimestamps.push(clock.elapsedTime);
+  A.dashDirections.push(yaw);
+  if(hp<40)A.dashWhenLowHp++;else A.dashWhenHighHp++;
+  // Combo detection
+  const now=clock.elapsedTime;
+  if(now-A.lastAbilityTime<1.5)A.abilityComboPatterns.push(A.lastAbilityType+'>dash');
+  A.lastAbilityTime=now;A.lastAbilityType='dash';
+}
+function recNade(pos,nearCount){
+  A.grenadeCount++;A.grenadeTimestamps.push(clock.elapsedTime);
+  A.grenadePositions.push({x:pos.x,z:pos.z});
+  if(nearCount>1)A.grenadesAtGroups++;else A.grenadesAtSingles++;
+  const now=clock.elapsedTime;
+  if(now-A.lastAbilityTime<1.5)A.abilityComboPatterns.push(A.lastAbilityType+'>nade');
+  A.lastAbilityTime=now;A.lastAbilityType='nade';
+}
+function recMelee(hit){
+  A.meleeCount++;A.meleeTimestamps.push(clock.elapsedTime);
+  if(hit)A.meleeHits++;
+  const now=clock.elapsedTime;
+  if(A.lastAbilityType==='dash'&&now-A.lastAbilityTime<1)A.meleeAfterDash++;
+  if(now-A.lastAbilityTime<1.5)A.abilityComboPatterns.push(A.lastAbilityType+'>melee');
+  A.lastAbilityTime=now;A.lastAbilityType='melee';
+}
+
+function compA(){
+  const tt=A.tMove+A.tStill||1;
+  A.avgSpd=A.dist/tt;A.acc=A.shotsFired>0?(A.shotsHit/A.shotsFired*100):0;
+  A.hsRate=A.shotsFired>0?(A.heads/A.shotsFired*100):0;
+  A.avgEngDist=A.engDist.length>0?A.engDist.reduce((s,v)=>s+v,0)/A.engDist.length:12;
+  A.combatRhythm=A.shotsFired/tt;
+  A.avgTBS=A.shotT.length>1?(A.shotT[A.shotT.length-1]-A.shotT[0])/(A.shotT.length-1):1;
+  A.avgBurst=A.burstL.length>0?A.burstL.reduce((s,v)=>s+v,0)/A.burstL.length:1;
+  A.avgReac=A.reacT.length>0?A.reacT.reduce((s,v)=>s+v,0)/A.reacT.length:2;
+  A.fastReac=A.reacT.length>0?Math.min(...A.reacT):2;
+  A.slowReac=A.reacT.length>0?Math.max(...A.reacT):2;
+  A.dps=A.dmgD/tt;
+  if(A.aimVH.length>10){
+    A.avgAimSpd=A.aimVH.reduce((s,v)=>s+v.speed,0)/A.aimVH.length;
+    A.aimStab=Math.max(0,100-A.avgAimSpd*15);
+    const mn=A.avgAimSpd,vr=A.aimVH.reduce((s,v)=>s+(v.speed-mn)**2,0)/A.aimVH.length;
+    A.aimTrackSmooth=Math.max(0,100-Math.sqrt(vr)*10);
+  }
+  A.mEntropy=A.dirChg/tt;
+  if(A.velH.length>30){
+    let mc=0,cc=0;
+    for(let l=10;l<30&&l<A.velH.length;l++)for(let i=l;i<Math.min(A.velH.length,l+50);i++){
+      if(Math.abs(A.velH[i].vx-A.velH[i-l].vx)<0.5&&Math.abs(A.velH[i].vz-A.velH[i-l].vz)<0.5)mc++;cc++;
+    }
+    A.movePred=cc>0?mc/cc:0;
+  }
+  A.aggScore=A.advC/Math.max(A.advC+A.retC,1);A.openRatio=1-(A.coverScore/tt);
+  // Playstyle with ability usage
+  const abilityRate=(A.dashCount+A.grenadeCount+A.meleeCount)/tt;
+  if(A.avgEngDist>22)A.playstyle='sniper';
+  else if(A.aggScore>0.65&&A.avgEngDist<10)A.playstyle=A.meleeCount>5?'brawler':'rusher';
+  else if(A.aggScore<0.3)A.playstyle='defensive';
+  else if(A.acc>55&&A.avgBurst<2.5)A.playstyle='precision';
+  else if(abilityRate>0.3&&A.dashCount>3)A.playstyle='ability-user';
+  else if(A.avgBurst>4)A.playstyle='spray';
+  else A.playstyle='balanced';
+  A.prefRange=A.avgEngDist<7?'close':A.avgEngDist<16?'mid':'long';
+  const st=A.sL+A.sR,sr=A.sL/Math.max(A.sR,1);
+  if(st>40){
+    if(Math.abs(sr-1)<0.3)A.dodgePattern='circle-strafe';
+    else if(sr>1.5)A.dodgePattern='left-bias';
+    else if(sr<0.67)A.dodgePattern='right-bias';
+    else A.dodgePattern='alternating';
+  }else if(A.mEntropy>3)A.dodgePattern='erratic';
+  else if(A.dashCount>5)A.dodgePattern='dash-dodge';
+  else A.dodgePattern='minimal';
+  if(A.aimSnaps>A.shotsFired*0.3)A.aimProfile='flick';
+  else if(A.avgBurst>3.5)A.aimProfile='spray';
+  else if(A.acc>45&&A.avgTBS>0.6)A.aimProfile='snappy';
+  else A.aimProfile='tracking';
+  A.threatResp=A.aggScore>0.6?'aggressive':A.retC>A.advC*1.4?'evasive':'balanced';
+  // Weakness detection (expanded)
+  A.weaknesses=[];A.strengths=[];
+  if(A.movePred>0.4)A.weaknesses.push('predictable-movement');
+  if(A.dodgePattern==='minimal')A.weaknesses.push('static-target');
+  if(A.acc<30)A.weaknesses.push('poor-aim');
+  if(A.avgReac>2.5)A.weaknesses.push('slow-reactions');
+  if(A.openRatio>0.7)A.weaknesses.push('no-cover');
+  if(A.hsRate<5)A.weaknesses.push('no-headshots');
+  if(A.frUnderP<A.frRelax*0.5&&A.frRelax>0)A.weaknesses.push('panic-fire');
+  if(A.cornerT>tt*0.3)A.weaknesses.push('corner-camper');
+  if(A.sL>A.sR*2)A.weaknesses.push('left-bias');
+  if(A.sR>A.sL*2)A.weaknesses.push('right-bias');
+  if(A.dmgTH.filter(d=>Math.abs(d.a)>Math.PI*0.6).length>A.dmgTH.length*0.3)A.weaknesses.push('rear-blind');
+  if(A.holdPosT>tt*0.4)A.weaknesses.push('stationary');
+  if(A.dashCount<2&&tt>30)A.weaknesses.push('no-dash-usage');
+  if(A.grenadeCount<1&&tt>30)A.weaknesses.push('no-nade-usage');
+  if(A.meleeCount===0&&A.avgEngDist<10)A.weaknesses.push('ignores-melee');
+  if(A.heatOverheatCount>3)A.weaknesses.push('trigger-discipline');
+  if(A.dashWhenLowHp<A.dashWhenHighHp*0.3&&A.dashCount>3)A.weaknesses.push('no-escape-dash');
+  if(A.acc>50)A.strengths.push('accurate');
+  if(A.hsRate>20)A.strengths.push('headshot-hunter');
+  if(A.avgReac<1.5)A.strengths.push('fast-reactions');
+  if(A.mEntropy>4)A.strengths.push('unpredictable');
+  if(A.dashCount>8)A.strengths.push('dash-master');
+  if(A.meleeAfterDash>2)A.strengths.push('combo-user');
+  if(A.coverScore>tt*0.3)A.strengths.push('tactical');
+  if(A.grenadeCount>4&&A.grenadesAtGroups>A.grenadeCount*0.5)A.strengths.push('smart-nades');
+  // Clusters
+  if(A.posH.length>50){
+    const k=4;let ctrs=A.posH.slice(0,k).map(p=>({x:p.x,z:p.z}));
+    for(let it=0;it<10;it++){
+      const cl=Array.from({length:k},()=>[]);
+      A.posH.forEach(p=>{let b=0,bd=1e9;ctrs.forEach((c,i)=>{const d=(p.x-c.x)**2+(p.z-c.z)**2;if(d<bd){bd=d;b=i;}});cl[b].push(p);});
+      ctrs=cl.map(c=>c.length?{x:c.reduce((s,p)=>s+p.x,0)/c.length,z:c.reduce((s,p)=>s+p.z,0)/c.length}:ctrs[0]);
+    }
+    A.posClusters=ctrs;
+  }
+}
+
+// ================================================================
+// SIMULATION ENGINE with 10 COMBAT ARCHETYPES
+// ================================================================
+const ARCHETYPES = [
+  // Core 10
+  {name:'Rusher',    avgSpeed:5.5,dodge:'erratic',accuracy:0.35,aggression:0.9,fireRate:4,range:6,cover:0.1,dashRate:0.3,nadeRate:0.1,meleeRate:0.4},
+  {name:'Sniper',    avgSpeed:1.5,dodge:'minimal',accuracy:0.65,aggression:0.15,fireRate:0.8,range:28,cover:0.7,dashRate:0.05,nadeRate:0.05,meleeRate:0},
+  {name:'Circler',   avgSpeed:4,dodge:'circle-strafe',accuracy:0.4,aggression:0.5,fireRate:3,range:12,cover:0.2,dashRate:0.15,nadeRate:0.1,meleeRate:0.1},
+  {name:'Camper',    avgSpeed:0.8,dodge:'minimal',accuracy:0.55,aggression:0.1,fireRate:1.5,range:20,cover:0.8,dashRate:0,nadeRate:0.2,meleeRate:0},
+  {name:'Sprayer',   avgSpeed:3,dodge:'alternating',accuracy:0.2,aggression:0.6,fireRate:6,range:10,cover:0.15,dashRate:0.1,nadeRate:0.15,meleeRate:0.05},
+  {name:'Flanker',   avgSpeed:4.5,dodge:'erratic',accuracy:0.45,aggression:0.55,fireRate:2.5,range:14,cover:0.3,dashRate:0.25,nadeRate:0.2,meleeRate:0.15},
+  {name:'Erratic',   avgSpeed:4,dodge:'erratic',accuracy:0.3,aggression:0.5,fireRate:3,range:12,cover:0.1,dashRate:0.3,nadeRate:0.1,meleeRate:0.2},
+  {name:'Tactical',  avgSpeed:2.5,dodge:'alternating',accuracy:0.5,aggression:0.4,fireRate:2,range:16,cover:0.6,dashRate:0.1,nadeRate:0.3,meleeRate:0.05},
+  {name:'Brawler',   avgSpeed:5,dodge:'erratic',accuracy:0.25,aggression:0.85,fireRate:2,range:5,cover:0.05,dashRate:0.35,nadeRate:0.05,meleeRate:0.6},
+  {name:'HyperAgg',  avgSpeed:5.5,dodge:'circle-strafe',accuracy:0.4,aggression:0.95,fireRate:4.5,range:8,cover:0,dashRate:0.4,nadeRate:0.15,meleeRate:0.3},
+  // Hybrid sub-variants
+  {name:'DashSniper', avgSpeed:2,dodge:'dash-dodge',accuracy:0.6,aggression:0.2,fireRate:1,range:25,cover:0.5,dashRate:0.4,nadeRate:0.1,meleeRate:0},
+  {name:'NadeSpam',   avgSpeed:3,dodge:'alternating',accuracy:0.3,aggression:0.45,fireRate:2,range:14,cover:0.4,dashRate:0.1,nadeRate:0.5,meleeRate:0.05},
+  {name:'GhostMelee', avgSpeed:5.8,dodge:'erratic',accuracy:0.15,aggression:0.95,fireRate:1,range:3,cover:0,dashRate:0.5,nadeRate:0,meleeRate:0.7},
+  {name:'Turtle',     avgSpeed:1,dodge:'minimal',accuracy:0.5,aggression:0.05,fireRate:1.5,range:22,cover:0.9,dashRate:0,nadeRate:0.3,meleeRate:0},
+  {name:'ComboKing',  avgSpeed:4.5,dodge:'dash-dodge',accuracy:0.4,aggression:0.7,fireRate:3,range:8,cover:0.1,dashRate:0.4,nadeRate:0.2,meleeRate:0.4},
+  {name:'Kiter',      avgSpeed:5,dodge:'circle-strafe',accuracy:0.45,aggression:0.2,fireRate:3,range:18,cover:0.2,dashRate:0.3,nadeRate:0.15,meleeRate:0},
+  {name:'Berserker',  avgSpeed:6,dodge:'erratic',accuracy:0.2,aggression:1.0,fireRate:5,range:4,cover:0,dashRate:0.5,nadeRate:0,meleeRate:0.8},
+  {name:'Sentinel',   avgSpeed:1.5,dodge:'alternating',accuracy:0.55,aggression:0.15,fireRate:2,range:20,cover:0.85,dashRate:0.05,nadeRate:0.4,meleeRate:0},
+  {name:'Assassin',   avgSpeed:5.5,dodge:'dash-dodge',accuracy:0.5,aggression:0.8,fireRate:2,range:6,cover:0.1,dashRate:0.45,nadeRate:0.1,meleeRate:0.5},
+  {name:'Wildcard',   avgSpeed:3+Math.random()*3,dodge:['erratic','circle-strafe','dash-dodge','minimal'][Math.floor(Math.random()*4)],accuracy:0.15+Math.random()*0.5,aggression:Math.random(),fireRate:1+Math.random()*5,range:4+Math.random()*24,cover:Math.random()*0.8,dashRate:Math.random()*0.5,nadeRate:Math.random()*0.4,meleeRate:Math.random()*0.5},
+];
+
+const Sim={
+  running:false,simCount:0,target:10000,gen:0,
+  genome:{approach:0.5,strafeF:1,strafeA:0.5,leadAim:0,dodgeReact:0.5,engDist:12,
+    repoThresh:0.5,flank:0.3,pressAgg:0.5,weakExploit:0,cover:0.3,retreatHp:0.2,
+    aimCorr:0.5,predictW:0,antiPat:0,
+    dashDodge:0.3,nadePressure:0.3,meleeCounter:0.3,comboExploit:0.2,
+    archetypeAdapt:0.5,
+    // v6: expanded
+    punishReload:0.3,   // rush when opponent reloads
+    punishOverheat:0.3, // push during overheat
+    punishCooldown:0.3, // attack when abilities on cd
+    zoneControl:0.3,    // deny map areas
+    mirrorAdapt:0.3,    // counter own weaknesses
+    comboChain:0.3,     // chain dash+nade+melee sequences
+    finisherInstinct:0.3,// aggression scaling with enemy low hp
+    adaptSpeed:0.5,     // how fast to shift strategy mid-fight
+    coverPeek:0.3,      // peek-shoot from cover
+    baitRetreat:0.3},   // fake retreat to lure
+  bestGenome:null,bestScore:-Infinity,
+  archetypeScores:{},  // track performance vs each archetype
+  versatility:0,       // 0-10, how many archetypes the clone beats
+  playerModel:null,iq:0,phase:'dormant',
+  // DYNASTY: evolutionary lineage
+  dynasty:[],dynastyMax:30,
+  selfPlayWins:0,selfPlayTotal:0,totalGvG:0,
+  armsRace:[],genLeap:0,elitePool:[],
+
+  // Genome-vs-Genome: two evolved genomes battle with full abilities
+  gvgFight(gA,gB){
+    let aH=100,bH=100,aP={x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30};
+    let bP={x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30};
+    let aV={x:0,z:0},bV={x:0,z:0};const dt=0.2;let sT=0;
+    let aSC=0,bSC=0,aDC=0,bDC=0,aNC=0,bNC=0,aMC=0,bMC=0;
+    let aA=30,bA=30,aHt=0,bHt=0,aRL=0,bRL=0;
+    for(let step=0;step<150;step++){
+      sT+=dt;if(aH<=0||bH<=0)break;
+      const d2=Math.sqrt((aP.x-bP.x)**2+(aP.z-bP.z)**2)||1;
+      // --- A movement ---
+      const anx=(bP.x-aP.x)/d2,anz=(bP.z-aP.z)/d2,apx=-anz,apz=anx;
+      let am=0,az2=0,ad=d2-gA.engDist;
+      am+=anx*ad*0.1*gA.approach;az2+=anz*ad*0.1*gA.approach;
+      am+=apx*Math.sin(sT*gA.strafeF*1.3)*gA.strafeA;az2+=apz*Math.cos(sT*gA.strafeF*1.3)*gA.strafeA;
+      if(gA.predictW>0){am+=bV.x*gA.predictW*0.5;az2+=bV.z*gA.predictW*0.5;}
+      if(bH<40){am+=anx*(gA.finisherInstinct+gA.pressAgg);az2+=anz*(gA.finisherInstinct+gA.pressAgg);}
+      if(aH<gA.retreatHp*100){am-=anx*0.8;az2-=anz*0.8;}
+      if(bRL>0&&gA.punishReload>0.3){am+=anx*gA.punishReload*2;az2+=anz*gA.punishReload*2;}
+      if(gA.baitRetreat>0.4&&d2<10&&Math.sin(sT*0.5)>0.7){am-=anx*gA.baitRetreat;az2-=anz*gA.baitRetreat;}
+      let al=Math.sqrt(am*am+az2*az2)||1;aV.x=am/al*6.5;aV.z=az2/al*6.5;
+      aP.x=Math.max(-38,Math.min(38,aP.x+aV.x*dt));aP.z=Math.max(-38,Math.min(38,aP.z+aV.z*dt));
+      // --- B movement ---
+      const bnx=(aP.x-bP.x)/d2,bnz=(aP.z-bP.z)/d2,bpx=-bnz,bpz=bnx;
+      let bm=0,bz2=0,bd=d2-gB.engDist;
+      bm+=bnx*bd*0.1*gB.approach;bz2+=bnz*bd*0.1*gB.approach;
+      bm+=bpx*Math.sin(sT*gB.strafeF*1.5+1)*gB.strafeA;bz2+=bpz*Math.cos(sT*gB.strafeF*1.5+1)*gB.strafeA;
+      if(gB.predictW>0){bm+=aV.x*gB.predictW*0.5;bz2+=aV.z*gB.predictW*0.5;}
+      if(aH<40){bm+=bnx*(gB.finisherInstinct+gB.pressAgg);bz2+=bnz*(gB.finisherInstinct+gB.pressAgg);}
+      if(bH<gB.retreatHp*100){bm-=bnx*0.8;bz2-=bnz*0.8;}
+      if(aRL>0&&gB.punishReload>0.3){bm+=bnx*gB.punishReload*2;bz2+=bnz*gB.punishReload*2;}
+      if(gB.baitRetreat>0.4&&d2<10&&Math.sin(sT*0.7)>0.7){bm-=bnx*gB.baitRetreat;bz2-=bnz*gB.baitRetreat;}
+      let bl=Math.sqrt(bm*bm+bz2*bz2)||1;bV.x=bm/bl*6.5;bV.z=bz2/bl*6.5;
+      bP.x=Math.max(-38,Math.min(38,bP.x+bV.x*dt));bP.z=Math.max(-38,Math.min(38,bP.z+bV.z*dt));
+      // Cooldowns
+      aDC-=dt;bDC-=dt;aNC-=dt;bNC-=dt;aMC-=dt;bMC-=dt;aRL-=dt;bRL-=dt;
+      aHt=Math.max(0,aHt-12*dt);bHt=Math.max(0,bHt-12*dt);
+      const dist=Math.sqrt((aP.x-bP.x)**2+(aP.z-bP.z)**2)||1;
+      // A abilities
+      if(aDC<=0&&gA.dashDodge>0.3&&Math.random()<0.04){aDC=3;aP.x+=apx*(Math.random()-0.5)*gA.dashDodge*6;aP.z+=apz*(Math.random()-0.5)*gA.dashDodge*6;}
+      if(aDC<=0&&gA.comboChain>0.3&&dist>3&&dist<9&&aMC<=0.5&&Math.random()<0.03){aDC=3;aP.x+=anx*5;aP.z+=anz*5;}
+      if(aNC<=0&&dist<18&&dist>4&&Math.random()<gA.nadePressure*0.04){aNC=5;if(dist<6)bH-=30;}
+      if(aMC<=0&&dist<3.5&&Math.random()<0.3){aMC=2;bH-=60;}
+      // B abilities
+      if(bDC<=0&&gB.dashDodge>0.3&&Math.random()<0.04){bDC=3;bP.x+=bpx*(Math.random()-0.5)*gB.dashDodge*6;bP.z+=bpz*(Math.random()-0.5)*gB.dashDodge*6;}
+      if(bDC<=0&&gB.comboChain>0.3&&dist>3&&dist<9&&bMC<=0.5&&Math.random()<0.03){bDC=3;bP.x+=bnx*5;bP.z+=bnz*5;}
+      if(bNC<=0&&dist<18&&dist>4&&Math.random()<gB.nadePressure*0.04){bNC=5;if(dist<6)aH-=30;}
+      if(bMC<=0&&dist<3.5&&Math.random()<0.3){bMC=2;aH-=60;}
+      // Shooting A
+      if(aRL<=0&&aHt<100&&aA>0){aSC-=dt;if(aSC<=0&&dist<35){aSC=0.12+(1-gA.aimCorr)*0.3;aA--;aHt+=4;
+        let h=0.2+gA.aimCorr*0.35;if(gA.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(bRL>0)h+=0.1;if(Math.random()<h)bH-=25;}}
+      if(aA<=0&&aRL<=0){aRL=1.3;aA=30;}
+      // Shooting B
+      if(bRL<=0&&bHt<100&&bA>0){bSC-=dt;if(bSC<=0&&dist<35){bSC=0.12+(1-gB.aimCorr)*0.3;bA--;bHt+=4;
+        let h=0.2+gB.aimCorr*0.35;if(gB.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(aRL>0)h+=0.1;if(Math.random()<h)aH-=25;}}
+      if(bA<=0&&bRL<=0){bRL=1.3;bA=30;}
+    }
+    let sc=(bH<=0?200:0)-(aH<=0?200:0)+(100-bH)*2-(100-aH)*2;
+    if(bH<=0&&sT<12)sc+=80;if(bH<=0&&aH>70)sc+=60;
+    return sc;
+  },
+
+  buildPlayerModel(){
+    this.playerModel={avgSpeed:A.avgSpd,dodge:A.dodgePattern,strafeRatio:A.sL/Math.max(A.sR,1),
+      accuracy:A.acc/100,avgEngDist:A.avgEngDist,reaction:A.avgReac,aggression:A.aggScore,
+      fireRate:A.combatRhythm,burstLen:A.avgBurst,movePred:A.movePred,
+      prefPos:Object.entries(A.posHM).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0].split(',').map(Number)),
+      weaknesses:[...A.weaknesses],coverUse:A.coverScore/Math.max(A.tMove+A.tStill,1),
+      aimProfile:A.aimProfile,posClusters:A.posClusters,dirChangeRate:A.mEntropy,
+      dashRate:A.dashCount/Math.max(A.tMove+A.tStill,1),
+      nadeRate:A.grenadeCount/Math.max(A.tMove+A.tStill,1),
+      meleeRate:A.meleeCount/Math.max(A.tMove+A.tStill,1),
+      dashBias:A.dashWhenLowHp/(Math.max(A.dashWhenHighHp,1)),
+      combos:A.abilityComboPatterns,meleeAfterDash:A.meleeAfterDash,
+    };
+  },
+
+  simFight(genome, model){
+    let cHp=100,pHp=100,cPos={x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30};
+    let pPos={x:0,z:0},pVel={x:0,z:0},dt=0.2,simT=0,cScore=0;
+    let cShootCd=0,pShootCd=0,pDodgePhase=Math.random()*Math.PI*2;
+    let pDashCd=0,pNadeCd=0,pMeleeCd=0;
+    // Clone abilities (same cooldowns as player)
+    let cDashCd=0,cNadeCd=0,cMeleeCd=0;
+    let cAmmo=30,cHeat=0,cReloading=0;
+    // Opponent state tracking for punishment
+    let pReloading=0,pAmmo=30,pLastShot=0;
+
+    for(let step=0;step<150;step++){
+      simT+=dt;if(cHp<=0||pHp<=0)break;
+
+      // --- OPPONENT MOVEMENT ---
+      pDodgePhase+=dt*model.dirChangeRate;
+      if(model.dodge==='circle-strafe'){const d=model.strafeRatio>1?1:-1;pVel.x=Math.cos(pDodgePhase)*model.avgSpeed*d;pVel.z=Math.sin(pDodgePhase)*model.avgSpeed;}
+      else if(model.dodge==='erratic'){if(step%5===0){pVel.x=(Math.random()-0.5)*model.avgSpeed*2;pVel.z=(Math.random()-0.5)*model.avgSpeed*2;}}
+      else if(model.dodge==='dash-dodge'){if(step%15===0){pVel.x=(Math.random()-0.5)*12;pVel.z=(Math.random()-0.5)*12;}else{pVel.x*=0.9;pVel.z*=0.9;}}
+      else{if(step%10===0){pVel.x=(Math.random()-0.5)*model.avgSpeed*0.5;pVel.z=(Math.random()-0.5)*model.avgSpeed*0.5;}}
+      const tCDx=cPos.x-pPos.x,tCDz=cPos.z-pPos.z,tCDi=Math.sqrt(tCDx*tCDx+tCDz*tCDz)||1;
+      if(model.aggression>0.5){pVel.x+=(tCDx/tCDi)*model.avgSpeed*0.3;pVel.z+=(tCDz/tCDi)*model.avgSpeed*0.3;}
+      pPos.x=Math.max(-38,Math.min(38,pPos.x+pVel.x*dt));pPos.z=Math.max(-38,Math.min(38,pPos.z+pVel.z*dt));
+
+      // Opponent abilities
+      pDashCd-=dt;pNadeCd-=dt;pMeleeCd-=dt;pReloading-=dt;
+      if(pDashCd<=0&&Math.random()<model.dashRate*dt){pPos.x+=pVel.x*3;pPos.z+=pVel.z*3;pDashCd=3;}
+      if(pNadeCd<=0&&Math.random()<model.nadeRate*dt&&tCDi<15){cHp-=25;cScore-=10;pNadeCd=5;}
+      if(pMeleeCd<=0&&tCDi<3.5&&Math.random()<model.meleeRate*dt){cHp-=50;cScore-=20;pMeleeCd=2;}
+
+      // Opponent ammo/reload tracking
+      pAmmo--;if(pAmmo<=0){pReloading=1.3;pAmmo=30;}
+
+      // --- CLONE MOVEMENT (uses all genome params) ---
+      const tPDx=pPos.x-cPos.x,tPDz=pPos.z-cPos.z,tPDi=Math.sqrt(tPDx*tPDx+tPDz*tPDz)||1;
+      const nPx=tPDx/tPDi,nPz=tPDz/tPDi,pX=-nPz,pZ=nPx;
+      let cmx=0,cmz=0;
+      const dd=tPDi-genome.engDist;
+      cmx+=nPx*dd*0.1*genome.approach;cmz+=nPz*dd*0.1*genome.approach;
+      cmx+=pX*Math.sin(simT*genome.strafeF)*genome.strafeA;cmz+=pZ*Math.sin(simT*genome.strafeF)*genome.strafeA;
+      if(genome.flank>0.3){cmx+=pX*genome.flank*0.5;cmz+=pZ*genome.flank*0.5;}
+      if(genome.predictW>0){cmx+=pVel.x*genome.predictW*0.5;cmz+=pVel.z*genome.predictW*0.5;}
+      // Finisher instinct: scale aggression with enemy low HP
+      if(pHp<40){const fi=genome.finisherInstinct||0.3;cmx+=nPx*(fi+genome.pressAgg)*1.2;cmz+=nPz*(fi+genome.pressAgg)*1.2;}
+      else if(pHp<70&&genome.pressAgg>0.3){cmx+=nPx*genome.pressAgg*0.5;cmz+=nPz*genome.pressAgg*0.5;}
+      // Retreat when low
+      if(cHp<genome.retreatHp*100){cmx-=nPx*0.8;cmz-=nPz*0.8;}
+      // Bait retreat: fake retreat then reverse
+      if(genome.baitRetreat>0.4&&tPDi<10&&Math.sin(simT*0.5)>0.7){cmx-=nPx*genome.baitRetreat;cmz-=nPz*genome.baitRetreat;}
+      // Cover peek: strafe near cover positions
+      if(genome.coverPeek>0.3){
+        let nearCover=false;
+        for(const cv of MapK.covers){if(Math.abs(cPos.x-cv[0])<4&&Math.abs(cPos.z-cv[2])<4){nearCover=true;break;}}
+        if(nearCover){cmx+=pX*Math.sin(simT*3)*genome.coverPeek*2;cmz+=pZ*Math.sin(simT*3)*genome.coverPeek*2;}
+      }
+      // PUNISH WINDOWS: rush when opponent reloads or overheats
+      if(pReloading>0&&genome.punishReload>0.3){cmx+=nPx*genome.punishReload*2;cmz+=nPz*genome.punishReload*2;cScore+=3;}
+      // Melee counter
+      if(model.meleeRate>0.2&&tPDi<5&&genome.meleeCounter>0.3){cmx-=nPx*genome.meleeCounter;cmz-=nPz*genome.meleeCounter;}
+
+      const cml=Math.sqrt(cmx*cmx+cmz*cmz)||1;
+      cPos.x=Math.max(-38,Math.min(38,cPos.x+(cmx/cml)*6.5*dt));
+      cPos.z=Math.max(-38,Math.min(38,cPos.z+(cmz/cml)*6.5*dt));
+
+      // --- CLONE ABILITIES ---
+      cDashCd-=dt;cNadeCd-=dt;cMeleeCd-=dt;cReloading-=dt;
+      cHeat=Math.max(0,cHeat-12*dt);
+
+      // Clone Dash: dodge reactively or gap-close for melee combo
+      if(cDashCd<=0){
+        if(genome.dashDodge>0.3&&Math.random()<0.04){
+          cDashCd=3;cPos.x+=pX*(Math.random()-0.5)*genome.dashDodge*6;cPos.z+=pZ*(Math.random()-0.5)*genome.dashDodge*6;
+          cPos.x=Math.max(-38,Math.min(38,cPos.x));cPos.z=Math.max(-38,Math.min(38,cPos.z));
+        }
+        // Combo chain: dash toward for melee
+        if(genome.comboChain>0.3&&tPDi>3&&tPDi<10&&cMeleeCd<=0.5&&Math.random()<0.03){
+          cDashCd=3;cPos.x+=nPx*5;cPos.z+=nPz*5;
+          cPos.x=Math.max(-38,Math.min(38,cPos.x));cPos.z=Math.max(-38,Math.min(38,cPos.z));
+        }
+      }
+      // Clone Grenade: predictive throw
+      if(cNadeCd<=0&&tPDi<18&&tPDi>4&&Math.random()<genome.nadePressure*0.04){
+        cNadeCd=5;const nd=Math.sqrt((pPos.x+pVel.x*3-cPos.x)**2+(pPos.z+pVel.z*3-cPos.z)**2);
+        if(nd<6){pHp-=30;cScore+=15;}
+      }
+      // Clone Melee: same 60 damage
+      if(cMeleeCd<=0&&tPDi<3.5&&Math.random()<0.3){
+        cMeleeCd=2;pHp-=60;cScore+=30;
+      }
+
+      // --- CLONE SHOOTING (same 25 damage as player) ---
+      if(cReloading<=0&&cHeat<100&&cAmmo>0){
+        cShootCd-=dt;
+        if(cShootCd<=0&&tPDi<35){
+          cShootCd=0.12+(1-genome.aimCorr)*0.3;
+          cAmmo--;cHeat+=4;
+          let hc=0.2+genome.aimCorr*0.35;
+          if(genome.leadAim>0.3)hc+=0.08;
+          hc*=Math.max(0.3,1-tPDi/40);
+          if(model.dodge==='minimal')hc+=0.12;
+          if(pReloading>0)hc+=0.1; // easy target while reloading
+          if(Math.random()<hc){pHp-=25;cScore+=15;}
+        }
+      }
+      if(cAmmo<=0&&cReloading<=0){cReloading=1.3;cAmmo=30;}
+      if(cHeat>=100){cHeat=100;} // overheat handled by heat decay
+
+      // Opponent shooting
+      if(pReloading<=0){
+        pShootCd-=dt;
+        if(pShootCd<=0){
+          pShootCd=1/Math.max(model.fireRate,0.5);
+          let ph=model.accuracy;
+          if(Math.abs(cmx)+Math.abs(cmz)>0.5)ph*=0.7;
+          if(Math.random()<ph){cHp-=22;cScore-=5;}
+        }
+      }
+    }
+    // Scoring: heavily reward efficient kills
+    if(pHp<=0){cScore+=250;cScore+=Math.max(0,(30-simT)*5);cScore+=cHp*1.5;}
+    if(cHp<=0)cScore-=120;
+    cScore+=(100-pHp)*2.5-(100-Math.max(cHp,0));
+    if(pHp<=0&&simT<10)cScore+=100;
+    if(pHp<=0&&cHp>80)cScore+=80;
+    return cScore;
+  },
+
+  mutate(g,r=0.15){const c={...g};Object.keys(c).forEach(k=>{if(Math.random()<r)c[k]=Math.max(0,Math.min(2,c[k]+(Math.random()-0.5)*0.4));});return c;},
+  cross(a,b){const c={};Object.keys(a).forEach(k=>c[k]=Math.random()<0.5?a[k]:b[k]);return c;},
+
+  runBatch(){
+    if(!this.playerModel||this.simCount>=this.target)return;
+    const POP=20;
+    let pop=[];
+    for(let i=0;i<POP;i++){
+      pop.push(this.bestGenome&&Math.random()<0.7?this.mutate(this.bestGenome,0.08+Math.random()*0.2):this.mutate(this.genome,0.25));
+    }
+    if(this.bestGenome)pop.push({...this.bestGenome});
+    pop.push({...this.genome});
+
+    const scores=pop.map(g=>{
+      let total=0;
+      // Test vs PLAYER (5 varied scenarios)
+      for(let s=0;s<5;s++){
+        const vm={...this.playerModel};
+        vm.avgSpeed*=0.75+Math.random()*0.5;vm.accuracy*=0.75+Math.random()*0.5;
+        if(s>=3){vm.aggression=Math.random();vm.dodge=['circle-strafe','erratic','minimal','dash-dodge'][Math.floor(Math.random()*4)];}
+        total+=this.simFight(g,vm)*1.2; // player weight higher
+      }
+      // KILL DRILLS: assassination (player low HP), clutch (clone low HP), finisher
+      for(let d=0;d<3;d++){
+        const vm={...this.playerModel};
+        vm.avgSpeed*=0.8+Math.random()*0.4;
+        const origFight=this.simFight;
+        // Hack: reduce starting HP for drills
+        const saved=this.simFight;
+        if(d===0){vm.accuracy*=0.5;total+=this.simFight(g,vm)*0.8;} // easy target - train to kill fast
+        if(d===1){vm.accuracy*=1.3;vm.aggression=0.9;total+=this.simFight(g,vm)*0.6;} // aggressive player - train survival
+        if(d===2){vm.dodge='erratic';vm.avgSpeed*=1.5;total+=this.simFight(g,vm)*0.7;} // hard dodger - train tracking
+      }
+      // Test vs ALL 20 ARCHETYPES
+      ARCHETYPES.forEach(arch=>{
+        const am={avgSpeed:arch.avgSpeed,dodge:arch.dodge,strafeRatio:1,accuracy:arch.accuracy,
+          avgEngDist:arch.range,reaction:1.5,aggression:arch.aggression,fireRate:arch.fireRate,
+          burstLen:3,movePred:0.3,prefPos:[],weaknesses:[],coverUse:arch.cover,
+          aimProfile:'tracking',posClusters:[],dirChangeRate:2,
+          dashRate:arch.dashRate,nadeRate:arch.nadeRate,meleeRate:arch.meleeRate,
+          dashBias:0.5,combos:[],meleeAfterDash:0};
+        total+=this.simFight(g,am)*0.5;
+      });
+      // ===== SELF-PLAY TOURNAMENT: genomes fight EACH OTHER =====
+      // Round-robin subset: each genome fights 4 random other genomes from this population
+      let spScore=0,spFights=0;
+      for(let r=0;r<4;r++){
+        const oppIdx=Math.floor(Math.random()*pop.length);
+        if(pop[oppIdx]===g) continue;
+        const result=this.gvgFight(g,pop[oppIdx]);
+        spScore+=result>0?30:-10; // reward winning, penalize losing
+        spFights++;
+        this.totalGvG++;
+      }
+      total+=spScore*0.5;
+
+      // ===== DYNASTY FIGHTS: fight champion genomes from PAST GENERATIONS =====
+      const dynastyFights=Math.min(this.dynasty.length, 4);
+      for(let d=0;d<dynastyFights;d++){
+        // Fight against champions in reverse-chronological order (newest first)
+        const champ=this.dynasty[this.dynasty.length-1-d];
+        const result=this.gvgFight(g,champ.genome);
+        // Must beat past champions to prove improvement — high weight
+        total+=result*0.7;
+        this.totalGvG++;
+      }
+
+      // ===== ELITE POOL: fight the 6 best genomes seen recently =====
+      const eliteFights=Math.min(this.elitePool.length, 3);
+      for(let e=0;e<eliteFights;e++){
+        const result=this.gvgFight(g,this.elitePool[e]);
+        total+=result*0.6;
+        this.totalGvG++;
+      }
+
+      // STRENGTH COUNTER
+      if(this.playerModel){
+        const pm=this.playerModel;const cm={...pm};
+        if(pm.accuracy>0.45)cm.accuracy=Math.min(0.7,pm.accuracy*1.4);
+        cm.avgSpeed*=1.2;cm.dashRate=Math.min(0.5,pm.dashRate*1.5);
+        total+=this.simFight(g,cm)*0.7;
+      }
+      // STRESS TESTS
+      for(let st=0;st<2;st++){
+        const stress={avgSpeed:4+Math.random()*3,dodge:['erratic','dash-dodge','circle-strafe'][st%3],
+          strafeRatio:1,accuracy:0.4+Math.random()*0.3,avgEngDist:6+Math.random()*16,
+          reaction:0.8,aggression:0.5+Math.random()*0.5,fireRate:3+Math.random()*3,
+          burstLen:3,movePred:0.5,prefPos:[],weaknesses:[],coverUse:Math.random()*0.5,
+          aimProfile:'flick',posClusters:[],dirChangeRate:3+Math.random()*2,
+          dashRate:0.3+Math.random()*0.2,nadeRate:0.2+Math.random()*0.2,
+          meleeRate:0.2+Math.random()*0.3,dashBias:0.5,combos:[],meleeAfterDash:0};
+        total+=this.simFight(g,stress)*0.4;
+      }
+      // PROGRESSIVE DIFFICULTY
+      const ps=Math.min(1.8,1+this.gen*0.012);
+      const pm2={avgSpeed:3.5*ps,dodge:'erratic',strafeRatio:1,accuracy:Math.min(0.65,0.3*ps),
+        avgEngDist:12,reaction:1.2,aggression:0.6,fireRate:3*ps,burstLen:3,movePred:0.3*ps,
+        prefPos:[],weaknesses:[],coverUse:0.3,aimProfile:'tracking',posClusters:[],dirChangeRate:2,
+        dashRate:0.2*ps,nadeRate:0.15*ps,meleeRate:0.15*ps,dashBias:0.5,combos:[],meleeAfterDash:0};
+      total+=this.simFight(g,pm2)*0.5;
+
+      return{genome:g,score:total/30};
+    });
+    scores.sort((a,b)=>b.score-a.score);
+
+    // Track arms race: did this generation improve?
+    const prevBest=this.bestScore;
+    if(scores[0].score>this.bestScore){this.bestScore=scores[0].score;this.bestGenome={...scores[0].genome};}
+    this.genLeap=scores[0].score-prevBest;
+    this.armsRace.push({gen:this.gen,score:scores[0].score});
+
+    // Crossover top 2 for next generation base
+    if(scores.length>=2)this.genome=this.cross(scores[0].genome,scores[1].genome);
+
+    // ===== DYNASTY MANAGEMENT =====
+    // Add this generation's champion to the dynasty
+    this.dynasty.push({genome:{...scores[0].genome}, gen:this.gen, score:scores[0].score});
+    // Keep only top dynastyMax by score, but always keep newest 5
+    if(this.dynasty.length>this.dynastyMax){
+      const newest=this.dynasty.slice(-5);
+      const rest=this.dynasty.slice(0,-5).sort((a,b)=>b.score-a.score).slice(0,this.dynastyMax-5);
+      this.dynasty=[...rest,...newest];
+    }
+
+    // Update elite pool: top 6 genomes from last 10 generations
+    const recentChamps=this.dynasty.slice(-10).sort((a,b)=>b.score-a.score).slice(0,6);
+    this.elitePool=recentChamps.map(d=>d.genome);
+
+    // Self-play stats: test current best vs dynasty
+    if(this.bestGenome&&this.dynasty.length>1){
+      let w=0,t=0;
+      this.dynasty.slice(0,-1).forEach(ch=>{
+        const r=this.gvgFight(this.bestGenome,ch.genome);
+        if(r>0)w++;t++;this.totalGvG++;
+      });
+      this.selfPlayWins=w;this.selfPlayTotal=t;
+    }
+
+    // Track per-archetype versatility
+    if(this.bestGenome){
+      let wins=0;
+      ARCHETYPES.forEach(arch=>{
+        const am={avgSpeed:arch.avgSpeed,dodge:arch.dodge,strafeRatio:1,accuracy:arch.accuracy,
+          avgEngDist:arch.range,reaction:1.5,aggression:arch.aggression,fireRate:arch.fireRate,
+          burstLen:3,movePred:0.3,prefPos:[],weaknesses:[],coverUse:arch.cover,
+          aimProfile:'tracking',posClusters:[],dirChangeRate:2,
+          dashRate:arch.dashRate,nadeRate:arch.nadeRate,meleeRate:arch.meleeRate,
+          dashBias:0.5,combos:[],meleeAfterDash:0};
+        const s=this.simFight(this.bestGenome,am);
+        this.archetypeScores[arch.name]=s;
+        if(s>50)wins++;
+      });
+      this.versatility=wins;
+    }
+
+    // Estimate total fights this batch
+    const selfPlayPerGenome=spFights+dynastyFights+eliteFights;
+    this.simCount+=POP*(5+3+ARCHETYPES.length+selfPlayPerGenome+1+2+1);
+    this.gen++;
+    if(this.simCount>8000)this.phase='mastered';
+    else if(this.simCount>4000)this.phase='advanced';
+    else if(this.simCount>1200)this.phase='learning';
+    else this.phase='observing';
+    this.iq=Math.min(500,Math.floor(10+(this.simCount/this.target)*100+(this.bestScore>0?60:0)+this.gen*2+A.weaknesses.length*6+this.versatility*4+this.dynasty.length*3+(this.selfPlayWins/(this.selfPlayTotal||1))*30));
+    if(this.bestGenome){
+      this.bestGenome.weakExploit=Math.min(1.5,0.2+A.weaknesses.length*0.12);
+      this.bestGenome.predictW=Math.min(1.2,A.movePred*2.5);
+      this.bestGenome.antiPat=Math.min(1,A.movePred*1.5);
+    }
+    this.updateHUD();
+  },
+
+  start(){this.running=true;this.phase='collecting';document.getElementById('simHud').style.opacity='1';this.next();},
+  next(){if(!this.running||this.simCount>=this.target)return;
+    (window.requestIdleCallback||setTimeout)(()=>{this.runBatch();if(this.running)this.next();},window.requestIdleCallback?{timeout:60}:15);},
+  updateHUD(){
+    const p=Math.min(100,(this.simCount/this.target)*100);
+    document.getElementById('simCount').textContent=`SIMS: ${this.simCount} | GEN ${this.gen} | GvG: ${this.totalGvG}`;
+    document.getElementById('simFill').style.width=p+'%';
+    document.getElementById('simPhase').textContent=`${this.phase.toUpperCase()} | VERS: ${this.versatility}/20 | DYNASTY: ${this.dynasty.length}`;
+  }
+};
+
+// ================================================================
+// MAP KNOWLEDGE — clone learns the arena geometry
+// ================================================================
+const MapK = {
+  // All cover positions the clone can use
+  covers: [[-12,0,-12],[12,0,-12],[-12,0,12],[12,0,12],[0,0,-20],[0,0,20],
+    [-20,0,0],[20,0,0],[-8,0,0],[8,0,0],[0,0,-8],[0,0,8],
+    [-16,0,-16],[16,0,16],[-16,0,16],[16,0,-16],[-25,0,10],[25,0,-10],[10,0,25],[-10,0,-25]],
+  crates: [[-6,0,-6],[6,0,6],[-18,0,8],[18,0,-8],[0,0,15],[0,0,-15],[-15,0,0],[15,0,0],[-22,0,-20],[22,0,20]],
+  wallMin: -38, wallMax: 38,
+  // Precomputed sight lines between cover positions
+  sightLines: [],
+  // Best ambush positions (corners with good angles)
+  ambushSpots: [],
+  // Grenade hotspots (open areas players cross)
+  nadeSpots: [[0,0,0],[-10,0,-10],[10,0,10],[0,0,-15],[0,0,15]],
+
+  init() {
+    // Compute sight lines: pairs of covers that can see each other
+    for(let i=0;i<this.covers.length;i++){
+      for(let j=i+1;j<this.covers.length;j++){
+        const a=this.covers[i],b=this.covers[j];
+        const d=Math.sqrt((a[0]-b[0])**2+(a[2]-b[2])**2);
+        if(d<25) this.sightLines.push({from:i,to:j,dist:d});
+      }
+    }
+    // Ambush spots: covers near map center with multiple sight lines
+    this.covers.forEach((c,i)=>{
+      const lines=this.sightLines.filter(l=>l.from===i||l.to===i).length;
+      const distFromCenter=Math.sqrt(c[0]**2+c[2]**2);
+      if(lines>=3 && distFromCenter<20) this.ambushSpots.push({pos:c,index:i,lines,score:lines*2-distFromCenter*0.1});
+    });
+    this.ambushSpots.sort((a,b)=>b.score-a.score);
+  },
+
+  // Find nearest cover to a position
+  nearestCover(x,z){
+    let best=null,bd=Infinity;
+    this.covers.forEach(c=>{const d=Math.sqrt((x-c[0])**2+(z-c[2])**2);if(d<bd){bd=d;best=c;}});
+    return{pos:best,dist:bd};
+  },
+
+  // Find cover that flanks a target position
+  flankCover(fromX,fromZ,targetX,targetZ){
+    const toTgt=Math.atan2(targetZ-fromZ,targetX-fromX);
+    let best=null,bestScore=-Infinity;
+    this.covers.forEach(c=>{
+      const d=Math.sqrt((c[0]-targetX)**2+(c[2]-targetZ)**2);
+      if(d>25||d<3) return;
+      const ang=Math.atan2(c[2]-targetZ,c[0]-targetX);
+      const flankAngle=Math.abs(ang-toTgt);
+      const score=Math.sin(flankAngle)*10-d*0.2; // perpendicular = better
+      if(score>bestScore){bestScore=score;best=c;}
+    });
+    return best;
+  },
+
+  // Find optimal grenade target near a position
+  bestNadeTarget(targetX,targetZ,playerVx,playerVz){
+    // Lead the target
+    return{x:targetX+playerVx*6, z:targetZ+playerVz*6};
+  },
+
+  // Check if position has wall cover from a direction
+  hasWallCover(x,z,fromX,fromZ){
+    const dx=fromX-x,dz=fromZ-z;
+    const ang=Math.atan2(dz,dx);
+    // Near walls that face the threat
+    if(x<-35 && Math.cos(ang)<0) return true;
+    if(x>35 && Math.cos(ang)>0) return true;
+    if(z<-35 && Math.sin(ang)<0) return true;
+    if(z>35 && Math.sin(ang)>0) return true;
+    return false;
+  }
+};
+
+// ================================================================
+// TRAINING VISUALIZATION — watch clone train at 1x speed
+// ================================================================
+const TrainViz = {
+  active: false,
+  canvas: null, ctx: null,
+  vizSim: null, // current visible simulation state
+  vizTimer: 0,
+  fightCount: 0,
+  wins: 0, losses: 0,
+  currentArchetype: '',
+  logMessages: [],
+  logTimer: 0,
+
+  init(){
+    this.canvas = document.getElementById('trainCanvas');
+    this.ctx = this.canvas.getContext('2d');
+  },
+
+  startFight(){
+    this.fightCount++;
+    // Alternate: 60% archetype fights, 40% self-play GvG
+    const isGvG = Sim.dynasty.length>0 && Math.random()<0.4;
+    if(isGvG){
+      // GvG: current best vs a dynasty champion
+      const champ=Sim.dynasty[Math.floor(Math.random()*Sim.dynasty.length)];
+      this.currentArchetype='SELF-PLAY GEN '+champ.gen;
+      this.vizSim={
+        clonePos:{x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30},
+        cloneHp:100,cloneAmmo:30,cloneHeat:0,cloneDashCd:0,cloneNadeCd:0,cloneMeleeCd:0,
+        oppPos:{x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30},
+        oppHp:100,oppAmmo:30,
+        arch:{name:'Gen'+champ.gen,avgSpeed:5,dodge:'alternating',accuracy:0.4,aggression:0.6,
+          fireRate:3,range:champ.genome.engDist||12,cover:0.3,dashRate:0.25,nadeRate:0.2,meleeRate:0.2},
+        isGvG:true,oppGenome:champ.genome,
+        bullets:[],nades:[],hits:[],time:0,done:false,winner:''
+      };
+    }else{
+      const arch=ARCHETYPES[Math.floor(Math.random()*ARCHETYPES.length)];
+      this.currentArchetype=arch.name;
+      this.vizSim={
+        clonePos:{x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30},
+        cloneHp:100,cloneAmmo:30,cloneHeat:0,cloneDashCd:0,cloneNadeCd:0,cloneMeleeCd:0,
+        oppPos:{x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30},
+        oppHp:100,oppAmmo:30,
+        arch:arch,isGvG:false,
+        bullets:[],nades:[],hits:[],time:0,done:false,winner:''
+      };
+    }
+    document.getElementById('trOpponent').textContent=this.currentArchetype.toUpperCase();
+    document.getElementById('trFight').textContent=this.fightCount;
+  },
+
+  update(dt){
+    if(!this.active) return;
+    if(!this.vizSim || this.vizSim.done){
+      this.startFight();
+      return;
+    }
+    const s = this.vizSim;
+    const g = Sim.bestGenome || Sim.genome;
+    s.time += dt;
+
+    // Opponent AI (archetype or evolved genome for GvG)
+    const a = s.arch;
+    const toCDx=s.clonePos.x-s.oppPos.x, toCDz=s.clonePos.z-s.oppPos.z;
+    const toCDi=Math.sqrt(toCDx*toCDx+toCDz*toCDz)||1;
+    const nOx=toCDx/toCDi, nOz=toCDz/toCDi;
+    const pOx=-nOz, pOz=nOx;
+    let omx=0,omz=0;
+    if(s.isGvG&&s.oppGenome){
+      // Evolved genome movement: mirrors the clone AI logic
+      const og=s.oppGenome;
+      const odd=toCDi-og.engDist;
+      omx+=nOx*odd*0.1*og.approach;omz+=nOz*odd*0.1*og.approach;
+      omx+=pOx*Math.sin(s.time*og.strafeF*1.4+2)*og.strafeA;
+      omz+=pOz*Math.cos(s.time*og.strafeF*1.4+2)*og.strafeA;
+      if(og.predictW>0){const cvx=(s.clonePos.x-s.oppPos.x)*0.1;omx+=cvx*og.predictW;omz+=cvx*og.predictW*0.5;}
+      if(s.cloneHp<40){omx+=nOx*(og.finisherInstinct+og.pressAgg);omz+=nOz*(og.finisherInstinct+og.pressAgg);}
+      if(s.oppHp<og.retreatHp*100){omx-=nOx*0.8;omz-=nOz*0.8;}
+      const oml=Math.sqrt(omx*omx+omz*omz)||1;omx=omx/oml*6.5;omz=omz/oml*6.5;
+    }else{
+      if(a.dodge==='circle-strafe'){omx=pOx*Math.cos(s.time*2)*a.avgSpeed;omz=pOz*Math.sin(s.time*2)*a.avgSpeed;}
+      else if(a.dodge==='erratic'){omx=Math.sin(s.time*3.7)*a.avgSpeed;omz=Math.cos(s.time*2.3)*a.avgSpeed;}
+      else{omx=Math.sin(s.time)*a.avgSpeed*0.3;omz=Math.cos(s.time*0.7)*a.avgSpeed*0.3;}
+      if(a.aggression>0.5){omx+=nOx*a.avgSpeed*0.3;omz+=nOz*a.avgSpeed*0.3;}
+    }
+    s.oppPos.x=Math.max(-38,Math.min(38,s.oppPos.x+omx*dt));
+    s.oppPos.z=Math.max(-38,Math.min(38,s.oppPos.z+omz*dt));
+
+    // Clone AI (using evolved genome + map knowledge)
+    const tPDx=s.oppPos.x-s.clonePos.x, tPDz=s.oppPos.z-s.clonePos.z;
+    const tPDi=Math.sqrt(tPDx*tPDx+tPDz*tPDz)||1;
+    const nCx=tPDx/tPDi, nCz=tPDz/tPDi;
+    const pCx=-nCz, pCz=nCx;
+    let cmx=0,cmz=0;
+    const dd=tPDi-g.engDist;
+    cmx+=nCx*dd*0.12*g.approach;cmz+=nCz*dd*0.12*g.approach;
+    cmx+=pCx*Math.sin(s.time*g.strafeF*1.5)*g.strafeA;cmz+=pCz*Math.sin(s.time*g.strafeF*1.5)*g.strafeA;
+    // Use map knowledge: move toward flank cover
+    const fc=MapK.flankCover(s.clonePos.x,s.clonePos.z,s.oppPos.x,s.oppPos.z);
+    if(fc&&g.flank>0.3){cmx+=(fc[0]-s.clonePos.x)*0.02*g.flank;cmz+=(fc[2]-s.clonePos.z)*0.02*g.flank;}
+    if(s.oppHp<30&&g.pressAgg>0.3){cmx+=nCx*g.pressAgg*1.2;cmz+=nCz*g.pressAgg*1.2;} // finish kill
+    const cml=Math.sqrt(cmx*cmx+cmz*cmz)||1;
+    s.clonePos.x=Math.max(-38,Math.min(38,s.clonePos.x+(cmx/cml)*6.5*dt));
+    s.clonePos.z=Math.max(-38,Math.min(38,s.clonePos.z+(cmz/cml)*6.5*dt));
+
+    // Combat: clone shoots
+    s.cloneHeat=Math.max(0,s.cloneHeat-12*dt);
+    s.cloneDashCd=Math.max(0,s.cloneDashCd-dt);
+    s.cloneNadeCd=Math.max(0,s.cloneNadeCd-dt);
+    s.cloneMeleeCd=Math.max(0,s.cloneMeleeCd-dt);
+    if(s.cloneAmmo>0&&s.cloneHeat<80&&Math.random()<3*dt&&tPDi<35){
+      s.cloneAmmo--;s.cloneHeat+=4;
+      let hc=0.35+g.aimCorr*0.25;hc*=Math.max(0.3,1-tPDi/40);
+      s.bullets.push({x:s.clonePos.x,z:s.clonePos.z,tx:s.oppPos.x,tz:s.oppPos.z,t:0.15,isClone:true});
+      if(Math.random()<hc){s.oppHp-=25;s.hits.push({x:s.oppPos.x,z:s.oppPos.z,t:0.3});}
+    }
+    if(s.cloneAmmo<=0){s.cloneAmmo=30;} // auto reload
+    // Clone dash
+    if(s.cloneDashCd<=0&&tPDi<5&&Math.random()<0.5*dt){
+      s.cloneDashCd=3;s.clonePos.x+=pCx*(Math.random()-0.5)*5;s.clonePos.z+=pCz*(Math.random()-0.5)*5;
+      s.hits.push({x:s.clonePos.x,z:s.clonePos.z,t:0.2,c:'#00aaff'});}
+    // Clone nade
+    if(s.cloneNadeCd<=0&&tPDi<18&&tPDi>4&&Math.random()<0.3*dt){
+      s.cloneNadeCd=5;s.nades.push({x:s.clonePos.x,z:s.clonePos.z,tx:s.oppPos.x,tz:s.oppPos.z,t:0.6});}
+    // Clone melee
+    if(s.cloneMeleeCd<=0&&tPDi<3.5&&Math.random()<2*dt){
+      s.cloneMeleeCd=2;s.oppHp-=60;s.hits.push({x:s.oppPos.x,z:s.oppPos.z,t:0.4,c:'#ff00aa'});}
+
+    // Opponent shoots back
+    if(Math.random()<a.fireRate*a.accuracy*dt*0.5&&tPDi<30){
+      s.cloneHp-=22;s.hits.push({x:s.clonePos.x,z:s.clonePos.z,t:0.3,c:'#ff4400'});
+      s.bullets.push({x:s.oppPos.x,z:s.oppPos.z,tx:s.clonePos.x,tz:s.clonePos.z,t:0.15,isClone:false});
+    }
+    // Opponent melee
+    if(tPDi<3.5&&Math.random()<a.meleeRate*dt){s.cloneHp-=50;s.hits.push({x:s.clonePos.x,z:s.clonePos.z,t:0.4,c:'#ff0044'});}
+
+    // Update effects
+    s.bullets=s.bullets.filter(b=>{b.t-=dt;return b.t>0;});
+    s.nades.forEach(n=>{n.t-=dt;const p=1-n.t/0.6;n.cx=n.x+(n.tx-n.x)*p;n.cz=n.z+(n.tz-n.z)*p;
+      if(n.t<=0){const d=Math.sqrt((n.tx-s.oppPos.x)**2+(n.tz-s.oppPos.z)**2);if(d<6)s.oppHp-=30;
+        s.hits.push({x:n.tx,z:n.tz,t:0.5,c:'#ff6600',r:8});}});
+    s.nades=s.nades.filter(n=>n.t>0);
+    s.hits=s.hits.filter(h=>{h.t-=dt;return h.t>0;});
+
+    // Check win/loss
+    if(s.oppHp<=0){s.done=true;s.winner='clone';this.wins++;this.addLog(`CLONE KILLED ${a.name.toUpperCase()} — ${s.cloneHp} HP left`);}
+    if(s.cloneHp<=0){s.done=true;s.winner='opp';this.losses++;this.addLog(`${a.name.toUpperCase()} killed clone — training...`);}
+    if(s.time>25){s.done=true;s.winner=s.cloneHp>s.oppHp?'clone':'opp';if(s.winner==='clone')this.wins++;else this.losses++;}
+
+    // Run actual background evolution alongside viz
+    Sim.runBatch();
+
+    // Update stats
+    document.getElementById('trSims').textContent=Sim.simCount;
+    document.getElementById('trGen').textContent=Sim.gen;
+    document.getElementById('trIQ').textContent=Sim.iq;
+    document.getElementById('trVers').textContent=Sim.versatility;
+    document.getElementById('trPhase').textContent=Sim.phase.toUpperCase();
+    document.getElementById('trBest').textContent=Sim.bestScore>0?Sim.bestScore.toFixed(0):'—';
+    document.getElementById('trWinRate').textContent=this.fightCount>0?Math.floor(this.wins/this.fightCount*100)+'%':'—';
+    document.getElementById('trGvG').textContent=Sim.totalGvG;
+    document.getElementById('trDynasty').textContent=Sim.dynasty.length;
+    document.getElementById('trElite').textContent=Sim.elitePool.length;
+    document.getElementById('trArms').textContent=Sim.armsRace.length>2?(Sim.armsRace[Sim.armsRace.length-1].score>Sim.armsRace[Math.max(0,Sim.armsRace.length-5)].score?'↑ IMPROVING':'→ PLATEAU'):'EARLY';
+
+    this.draw();
+  },
+
+  draw(){
+    const c=this.ctx,s=this.vizSim,w=380,h=380;
+    c.clearRect(0,0,w,h);
+    // Map function: world (-40..40) to canvas
+    const tx=x=>(x+40)/80*w, tz=z=>(z+40)/80*h;
+    // Draw grid
+    c.strokeStyle='rgba(0,255,200,0.04)';c.lineWidth=0.5;
+    for(let i=0;i<=80;i+=4){const p=i/80*w;c.beginPath();c.moveTo(p,0);c.lineTo(p,h);c.stroke();c.beginPath();c.moveTo(0,p);c.lineTo(w,p);c.stroke();}
+    // Draw walls
+    c.strokeStyle='rgba(0,255,200,0.15)';c.lineWidth=2;c.strokeRect(tx(-38),tz(-38),tx(38)-tx(-38),tz(38)-tz(-38));
+    // Draw cover
+    MapK.covers.forEach(p=>{c.fillStyle='rgba(255,255,255,0.06)';c.beginPath();c.arc(tx(p[0]),tz(p[2]),4,0,Math.PI*2);c.fill();});
+    MapK.crates.forEach(p=>{c.fillStyle='rgba(255,255,255,0.04)';c.fillRect(tx(p[0])-3,tz(p[2])-3,6,6);});
+    if(!s) return;
+    // Draw bullets
+    s.bullets.forEach(b=>{
+      c.strokeStyle=b.isClone?'rgba(0,255,200,0.5)':'rgba(255,68,0,0.5)';c.lineWidth=1;
+      c.beginPath();c.moveTo(tx(b.x),tz(b.z));c.lineTo(tx(b.tx),tz(b.tz));c.stroke();
+    });
+    // Draw grenades
+    s.nades.forEach(n=>{
+      c.fillStyle='rgba(255,100,0,0.6)';c.beginPath();c.arc(tx(n.cx||n.x),tz(n.cz||n.z),3,0,Math.PI*2);c.fill();
+      c.strokeStyle='rgba(255,100,0,0.2)';c.beginPath();c.arc(tx(n.tx),tz(n.tz),6*4.75/4,0,Math.PI*2);c.stroke();
+    });
+    // Draw hits
+    s.hits.forEach(h=>{
+      const r=h.r||3;c.fillStyle=(h.c||'#ff4400')+'88';c.beginPath();c.arc(tx(h.x),tz(h.z),r*(h.t/0.5),0,Math.PI*2);c.fill();
+    });
+    // Draw opponent (purple for GvG, red for archetype)
+    const oppCol=s.isGvG?'#aa00ff':'#ff0044';const oppA=s.isGvG?'rgba(170,0,255,':'rgba(255,0,68,';
+    c.fillStyle=oppCol;c.beginPath();c.arc(tx(s.oppPos.x),tz(s.oppPos.z),5,0,Math.PI*2);c.fill();
+    c.fillStyle=oppA+'0.15)';c.beginPath();c.arc(tx(s.oppPos.x),tz(s.oppPos.z),12,0,Math.PI*2);c.fill();
+    c.fillStyle=oppA+'0.4)';c.fillRect(tx(s.oppPos.x)-10,tz(s.oppPos.z)-10,20,2);
+    c.fillStyle=oppCol;c.fillRect(tx(s.oppPos.x)-10,tz(s.oppPos.z)-10,20*Math.max(0,s.oppHp/100),2);
+    // Draw clone
+    c.fillStyle='#00ffc8';c.beginPath();c.arc(tx(s.clonePos.x),tz(s.clonePos.z),5,0,Math.PI*2);c.fill();
+    c.fillStyle='rgba(0,255,200,0.1)';c.beginPath();c.arc(tx(s.clonePos.x),tz(s.clonePos.z),12,0,Math.PI*2);c.fill();
+    // HP bar
+    c.fillStyle='rgba(0,255,200,0.3)';c.fillRect(tx(s.clonePos.x)-10,tz(s.clonePos.z)-10,20,2);
+    c.fillStyle='#00ffc8';c.fillRect(tx(s.clonePos.x)-10,tz(s.clonePos.z)-10,20*Math.max(0,s.cloneHp/100),2);
+    // Labels
+    c.font='7px Courier New';c.fillStyle='rgba(0,255,200,0.5)';c.fillText('CLONE',tx(s.clonePos.x)-12,tz(s.clonePos.z)+18);
+    c.fillStyle=s.isGvG?'rgba(170,0,255,0.5)':'rgba(255,0,68,0.5)';c.fillText(s.isGvG?'GEN '+s.arch.name.replace('Gen',''):s.arch.name.toUpperCase(),tx(s.oppPos.x)-12,tz(s.oppPos.z)+18);
+  },
+
+  addLog(msg){
+    this.logMessages.unshift(msg);if(this.logMessages.length>3)this.logMessages.pop();
+    document.getElementById('trainLog').textContent=this.logMessages.join(' | ');
+  }
+};
+
+function openTraining(){
+  document.getElementById('titleScr').style.display='none';
+  document.getElementById('trainPanel').style.display='flex';
+  TrainViz.init();
+  TrainViz.active=true;
+  // Build a default player model for pre-game training
+  if(!Sim.playerModel){
+    Sim.playerModel={avgSpeed:4,dodge:'alternating',strafeRatio:1,accuracy:0.35,avgEngDist:12,reaction:1.8,
+      aggression:0.5,fireRate:3,burstLen:3,movePred:0.3,prefPos:[],weaknesses:['balanced'],coverUse:0.3,
+      aimProfile:'tracking',posClusters:[],dirChangeRate:2,dashRate:0.15,nadeRate:0.1,meleeRate:0.1,
+      dashBias:0.5,combos:[],meleeAfterDash:0};
+  }
+  MapK.init();
+  Sim.running=true; Sim.phase='collecting';
+  trainLoop();
+}
+
+function closeTraining(){
+  TrainViz.active=false;
+  Sim.running=false;
+  document.getElementById('trainPanel').style.display='none';
+  document.getElementById('titleScr').style.display='flex';
+}
+
+let trainLastTime=0;
+function trainLoop(){
+  if(!TrainViz.active) return;
+  const now=performance.now()/1000;
+  const dt=trainLastTime?Math.min(now-trainLastTime,0.05):0.016;
+  trainLastTime=now;
+  TrainViz.update(dt);
+  requestAnimationFrame(trainLoop);
+}
+
+// ================================================================
+// ENVIRONMENT
+// ================================================================
+function buildEnv(){
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshStandardMaterial({color:0x0e0e1a,roughness:0.92,metalness:0.08}));
+  gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+  const gr=new THREE.GridHelper(80,40,0x00ffc8,0x080818);gr.material.opacity=0.05;gr.material.transparent=true;scene.add(gr);
+  const wM=new THREE.MeshStandardMaterial({color:0x10102a,roughness:0.6,metalness:0.4});
+  const wG=new THREE.BoxGeometry(80,6,0.8);
+  [{p:[0,3,40],r:0},{p:[0,3,-40],r:0},{p:[40,3,0],r:Math.PI/2},{p:[-40,3,0],r:Math.PI/2}].forEach(w=>{
+    const m=new THREE.Mesh(wG,wM);m.position.set(...w.p);m.rotation.y=w.r;m.castShadow=m.receiveShadow=true;scene.add(m);
+  });
+  const pG=new THREE.CylinderGeometry(0.65,0.85,4,8);
+  const pM=new THREE.MeshStandardMaterial({color:0x14143a,roughness:0.45,metalness:0.55});
+  coverPos.forEach(p=>{
+    const m=new THREE.Mesh(pG,pM);m.position.set(...p);m.castShadow=m.receiveShadow=true;scene.add(m);
+    const rn=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.03,8,16),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:0.1}));
+    rn.position.set(p[0],0.1,p[2]);rn.rotation.x=-Math.PI/2;scene.add(rn);
+  });
+  const cG=new THREE.BoxGeometry(2,2,2),cM=new THREE.MeshStandardMaterial({color:0x1a1438,roughness:0.55,metalness:0.45});
+  [[-6,1,-6],[6,1,6],[-18,1,8],[18,1,-8],[0,1,15],[0,1,-15],[-15,1,0],[15,1,0],[-22,1,-20],[22,1,20]].forEach(p=>{
+    const m=new THREE.Mesh(cG,cM);m.position.set(...p);m.rotation.y=Math.random()*Math.PI;m.castShadow=m.receiveShadow=true;scene.add(m);
+  });
+  scene.add(new THREE.AmbientLight(0x121228,0.3));
+  const dl=new THREE.DirectionalLight(0x2244aa,0.5);dl.position.set(20,30,10);dl.castShadow=true;
+  dl.shadow.mapSize.set(1024,1024);dl.shadow.camera.near=0.5;dl.shadow.camera.far=80;
+  dl.shadow.camera.left=dl.shadow.camera.bottom=-40;dl.shadow.camera.right=dl.shadow.camera.top=40;scene.add(dl);
+  const nC=[0x00ffc8,0xff0044,0x3300ff,0xff6600,0x00aaff,0xff00aa];
+  [[-15,2.5,-15],[15,2.5,15],[-15,2.5,15],[15,2.5,-15],[0,3,0],[-25,2.5,25]].forEach((p,i)=>{
+    scene.add(Object.assign(new THREE.PointLight(nC[i%6],1.6,16),{position:new THREE.Vector3(...p)}));
+    scene.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),new THREE.MeshBasicMaterial({color:nC[i%6]})),{position:new THREE.Vector3(...p)}));
+  });
+  for(let i=0;i<35;i++){
+    const s=0.05+Math.random()*0.08;
+    const m=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(0.47+Math.random()*0.1,0.6,0.5),transparent:true,opacity:0.3}));
+    m.position.set((Math.random()-0.5)*60,1.5+Math.random()*3.5,(Math.random()-0.5)*60);
+    m.userData.fy=m.position.y;m.userData.fs=0.3+Math.random()*0.7;scene.add(m);fObjs.push(m);
+  }
+}
+
+function createWeapon(){
+  weaponG=new THREE.Group();
+  const gm=new THREE.MeshStandardMaterial({color:0x282838,metalness:0.9,roughness:0.12});
+  weaponG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.032,0.032,0.36),gm),{position:new THREE.Vector3(0.21,-0.16,-0.35)}));
+  weaponG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.05,0.07,0.18),gm),{position:new THREE.Vector3(0.21,-0.18,-0.17)}));
+  weaponG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.032,0.08,0.032),new THREE.MeshStandardMaterial({color:0x181828,metalness:0.5,roughness:0.6})),{position:new THREE.Vector3(0.21,-0.26,-0.11)}));
+  weaponG.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.006,6,6),new THREE.MeshBasicMaterial({color:0x00ffc8})),{position:new THREE.Vector3(0.21,-0.13,-0.45)}));
+  cam.add(weaponG);scene.add(cam);
+}
+
+// ================================================================
+// ENEMIES
+// ================================================================
+function mkEnemy(x,z,type='grunt'){
+  const g=new THREE.Group();
+  const cols={grunt:0xff4400,heavy:0xaa0044,fast:0xff8800,clone:0x00ffc8};
+  const c=cols[type]||0xff4400;
+  const bM=new THREE.MeshStandardMaterial({color:c,roughness:0.4,metalness:0.6,emissive:c,emissiveIntensity:0.1});
+  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.36,1.3,8),bM),{position:new THREE.Vector3(0,0.85,0),castShadow:true}));
+  g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.22,8,8),new THREE.MeshStandardMaterial({color:0xddbbaa,roughness:0.5,metalness:0.3})),{position:new THREE.Vector3(0,1.78,0),castShadow:true}));
+  const eM=new THREE.MeshBasicMaterial({color:type==='clone'?0x00ffc8:0xff0000});
+  [-0.06,0.06].forEach(ox=>g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6),eM),{position:new THREE.Vector3(ox,1.83,0.18)})));
+  [-0.4,0.4].forEach(ox=>g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.14,6,6),bM),{position:new THREE.Vector3(ox,1.38,0)})));
+  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.3),new THREE.MeshStandardMaterial({color:0x333,metalness:0.8,roughness:0.2})),{position:new THREE.Vector3(0.45,0.93,0.4)}));
+  g.position.set(x,0,z);scene.add(g);
+  const st={grunt:{hp:50,spd:3,dmg:7,si:1.6},heavy:{hp:100,spd:1.6,dmg:13,si:2.2},fast:{hp:30,spd:5.5,dmg:5,si:1},clone:{hp:160,spd:4,dmg:10,si:0.85}}[type]||{hp:50,spd:3,dmg:7,si:1.6};
+  return{mesh:g,type,hp:st.hp,maxHp:st.hp,speed:st.spd,damage:st.dmg,shootInterval:st.si,lastShot:0,
+    strafeDT:0,strafeD:1,spawnTime:clock.elapsedTime,firstEng:false,adaptPhase:0,adaptTimer:0};
+}
+
+function mkClone(){
+  const g=Sim.bestGenome||Sim.genome;
+  const x=(Math.random()-0.5)*28,z=(Math.random()-0.5)*28;
+  const cl=mkEnemy(x,z,'clone');
+  cl.genome={...g};cl.iq=Sim.iq;cl.versatility=Sim.versatility;
+  cl.weakTargets=[...A.weaknesses];cl.pClusters=A.posClusters;
+  cl.pDodge=A.dodgePattern;cl.pSR=A.sL/Math.max(A.sR,1);
+  cl.pPred=A.movePred;cl.pSpd=A.avgSpd;cl.pAcc=A.acc;
+  cl.pRange=A.avgEngDist;cl.pAgg=A.aggScore;cl.pAim=A.aimProfile;
+  cl.pFR=A.combatRhythm;cl.pDashRate=A.dashCount/Math.max(A.tMove+A.tStill,1);
+  cl.pMeleeRate=A.meleeCount/Math.max(A.tMove+A.tStill,1);
+  cl.pCombos=A.abilityComboPatterns;
+  cl.archetypeScores={...Sim.archetypeScores};
+  // *** EXACT PLAYER STATS — same HP, speed, damage ***
+  cl.hp=100;cl.maxHp=100;
+  cl.damage=25; // same as player body shot
+  cl.headDmg=55; // same as player headshot
+  cl.speed=6.5; // identical to player moveSpeed
+  cl.shootInterval=0.1; // same as player auto-fire (100ms)
+  // Clone has identical ability stats
+  cl.cloneDashCd=0;cl.cloneDashCD_MAX=DASH_CD; // 3s same
+  cl.cloneDashDur=DASH_DUR;cl.cloneDashSpd=DASH_SPD; // same
+  cl.cloneNadeCd=0;cl.cloneNadeCD_MAX=NADE_CD; // 5s same
+  cl.cloneNadeDmg=50; // same grenade base damage
+  cl.cloneMeleeCd=0;cl.cloneMeleeCD_MAX=MELEE_CD; // 2s same
+  cl.cloneMeleeDmg=MELEE_DMG; // 60 same
+  cl.cloneMeleeRange=MELEE_RANGE; // 3.5 same
+  cl.cloneAmmo=30;cl.cloneMaxAmmo=30; // same mag
+  cl.cloneHeat=0;cl.cloneOverheated=false;
+  cl.cloneReloading=false;cl.cloneReloadTimer=0;
+  // Learning state
+  cl.adaptPhase=0;cl.adaptTimer=0;
+  cl.learnRate=Math.min(1,Sim.simCount/1500); // faster threshold
+  cl.lastPPos={x:cam.position.x,z:cam.position.z};cl.predPos={x:0,z:0};
+  cl.consHits=0;cl.consMiss=0;
+  cl.pVelHistory=[];  // recent player velocity for prediction
+  cl.shotsFiredByClone=0;cl.shotsHitByClone=0;
+  cl.lastDashTime=0;cl.lastNadeTime=0;cl.lastMeleeTime=0;
+  cl.comboState='';cl.comboTimer=0;
+  // Visual
+  cl.mesh.traverse(ch=>{if(ch.isMesh&&ch.material.emissive){ch.material.emissive.set(0x00ffc8);ch.material.emissiveIntensity=0.1;ch.material.color.set(0x006655);}});
+  const gl=new THREE.PointLight(0x00ffc8,0.8,5);gl.position.y=1.5;cl.mesh.add(gl);cl.glow=gl;
+  return cl;
+}
+
+// ================================================================
+// ENEMY AI
+// ================================================================
+function updateEnemyAI(e,dt){
+  const ep=e.mesh.position,dist=ep.distanceTo(cam.position);
+  const toP=new THREE.Vector3().subVectors(cam.position,ep).normalize();
+  e.mesh.lookAt(cam.position.x,0,cam.position.z);
+  if(e.type==='clone'){updateCloneAI(e,dt,dist,toP);return;}
+  e.strafeDT-=dt;if(e.strafeDT<=0){e.strafeD*=-1;e.strafeDT=1+Math.random()*2;}
+  const sv=new THREE.Vector3(-toP.z,0,toP.x).multiplyScalar(e.strafeD);
+  if(dist>5){ep.add(toP.clone().multiplyScalar(e.speed*dt));ep.add(sv.clone().multiplyScalar(e.speed*0.3*dt));}
+  else ep.add(sv.clone().multiplyScalar(e.speed*0.5*dt));
+  ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);
+  const now=clock.elapsedTime;
+  if(now-e.lastShot>e.shootInterval&&dist<30){e.lastShot=now;
+    if(Math.random()<0.28)playerDmg(e.damage,ep);
+    spawnFlash(ep.clone().add(toP.clone().multiplyScalar(0.6)).add(new THREE.Vector3(0,1.1,0)));
+  }
+}
+
+function updateCloneAI(cl,dt,dist,toP){
+  const ep=cl.mesh.position,g=cl.genome,now=clock.elapsedTime;
+  cl.adaptTimer+=dt;
+  // *** HYPER-FAST LEARNING: phases every ~2s ***
+  const phaseTime=Math.max(1.5,4.5-cl.learnRate*2.5);
+  const np=Math.min(5,Math.floor(cl.adaptTimer/phaseTime));
+  if(np>cl.adaptPhase){
+    cl.adaptPhase=np;
+    cl.mesh.traverse(ch=>{if(ch.isMesh&&ch.material.emissiveIntensity!==undefined)ch.material.emissiveIntensity=0.1+np*0.16;});
+    if(cl.glow){cl.glow.intensity=0.8+np*1.1;cl.glow.distance=5+np*3;}
+    const dIQ=Math.floor(cl.iq*(0.15+np*0.17));
+    document.getElementById('iqText').textContent=`CLONE IQ: ${dIQ}`;
+    document.getElementById('iqFill').style.width=Math.min(100,dIQ/2.5)+'%';
+    document.getElementById('versText').textContent=`VERSATILITY: ${cl.versatility}/10 | PHASE ${np}`;
+  }
+  // Weighted velocity prediction from rolling window
+  const pV={x:cam.position.x-cl.lastPPos.x,z:cam.position.z-cl.lastPPos.z};
+  cl.lastPPos={x:cam.position.x,z:cam.position.z};
+  cl.pVelHistory.push({x:pV.x,z:pV.z});if(cl.pVelHistory.length>20)cl.pVelHistory.shift();
+  let predVx=0,predVz=0,wSum=0;
+  cl.pVelHistory.forEach((v,i)=>{const w=i+1;predVx+=v.x*w;predVz+=v.z*w;wSum+=w;});
+  predVx/=wSum||1;predVz/=wSum||1;
+  const ps=cl.adaptPhase>=2?g.predictW*(1+cl.adaptPhase*0.3):0;
+  cl.predPos={x:cam.position.x+predVx*ps*14,z:cam.position.z+predVz*ps*14};
+
+  const nPx=toP.x,nPz=toP.z,pX=-nPz,pZ=nPx;
+  let mx=0,mz=0;const t=clock.elapsedTime;
+
+  // === MOVEMENT — starts slow, ramps to player speed 6.5 ===
+  if(cl.adaptPhase===0){
+    mx=nPx*0.3;mz=nPz*0.3;mx+=pX*Math.sin(t*0.7)*0.15;mz+=pZ*Math.sin(t*0.7)*0.15;
+    cl.speed=2.5;
+  }else if(cl.adaptPhase===1){
+    const dd=dist-g.engDist;mx=nPx*dd*0.08*g.approach;mz=nPz*dd*0.08*g.approach;
+    mx+=pX*Math.sin(t*g.strafeF)*g.strafeA*0.55;mz+=pZ*Math.sin(t*g.strafeF)*g.strafeA*0.55;
+    cl.speed=4.2;
+  }else if(cl.adaptPhase===2){
+    const dd=dist-g.engDist;mx=nPx*dd*0.1*g.approach;mz=nPz*dd*0.1*g.approach;
+    mx+=pX*Math.sin(t*g.strafeF*1.4)*g.strafeA;mz+=pZ*Math.sin(t*g.strafeF*1.4)*g.strafeA;
+    if(cl.pDodge.includes('left')){mx+=pX*0.3;mz+=pZ*0.3;}
+    else if(cl.pDodge.includes('right')){mx-=pX*0.3;mz-=pZ*0.3;}
+    cl.speed=5.5;
+  }else if(cl.adaptPhase===3){
+    const dd=dist-g.engDist;mx=nPx*dd*0.12*g.approach;mz=nPz*dd*0.12*g.approach;
+    mx+=pX*(Math.sin(t*g.strafeF*1.6)+Math.sin(t*2.7)*0.4)*g.strafeA;
+    mz+=pZ*(Math.sin(t*g.strafeF*1.6)+Math.sin(t*2.7)*0.4)*g.strafeA;
+    cl.weakTargets.forEach(w=>{
+      if(w==='rear-blind'){mx+=(cam.position.x-nPx*10-ep.x)*0.025;mz+=(cam.position.z-nPz*10-ep.z)*0.025;}
+      if(w==='static-target'||w==='stationary'){mx+=nPx*0.5;mz+=nPz*0.5;}
+      if(w==='left-bias'){mx+=pX*0.4;mz+=pZ*0.4;}if(w==='right-bias'){mx-=pX*0.4;mz-=pZ*0.4;}
+      if(w==='no-cover'){mx+=nPx*0.35;mz+=nPz*0.35;}
+    });
+    if(cl.pRange>18&&dist>10){mx+=nPx*0.6;mz+=nPz*0.6;}
+    if(cl.pRange<7&&dist<12){mx-=nPx*0.3;mz-=nPz*0.3;}
+    cl.speed=6.5; // matches player
+  }else if(cl.adaptPhase===4){
+    const pdx=cl.predPos.x-ep.x,pdz=cl.predPos.z-ep.z,pdi=Math.sqrt(pdx*pdx+pdz*pdz)||1;
+    mx=(pdx/pdi)*0.45+nPx*0.3;mz=(pdz/pdi)*0.45+nPz*0.3;
+    mx+=pX*(Math.sin(t*3.7)*0.3+Math.sin(t*5.8)*0.22+Math.sin(t*8.1)*0.13);
+    mz+=pZ*(Math.cos(t*4.1)*0.3+Math.cos(t*6.3)*0.22+Math.cos(t*9.7)*0.13);
+    cl.weakTargets.forEach(w=>{
+      if(w==='predictable-movement'){mx+=predVx*45;mz+=predVz*45;}
+      if(w==='panic-fire'&&hp<50){mx+=nPx*0.9;mz+=nPz*0.9;}
+      if(w==='no-dash-usage'){mx+=nPx*0.4;mz+=nPz*0.4;}
+      if(w==='no-escape-dash'&&hp<30){mx+=nPx*1.2;mz+=nPz*1.2;}
+      if(w==='corner-camper'){mx+=(0-ep.x)*0.02;mz+=(0-ep.z)*0.02;}
+    });
+    if(cl.pClusters&&cl.pClusters.length>0){mx+=(cl.pClusters[0].x-ep.x)*0.015;mz+=(cl.pClusters[0].z-ep.z)*0.015;}
+    cl.speed=6.5;
+  }else{
+    const pdx=cl.predPos.x-ep.x,pdz=cl.predPos.z-ep.z,pdi=Math.sqrt(pdx*pdx+pdz*pdz)||1;
+    mx=(pdx/pdi)*0.55+nPx*0.25;mz=(pdz/pdi)*0.55+nPz*0.25;
+    mx+=pX*(Math.sin(t*4.3)*0.28+Math.sin(t*7.1)*0.2+Math.sin(t*12.7)*0.12+Math.sin(t*17.3)*0.08);
+    mz+=pZ*(Math.cos(t*3.7)*0.28+Math.cos(t*8.3)*0.2+Math.cos(t*11.1)*0.12+Math.cos(t*15.9)*0.08);
+    cl.weakTargets.forEach(w=>{
+      if(w==='predictable-movement'){mx+=predVx*65;mz+=predVz*65;}
+      if(w==='panic-fire'&&hp<60){mx+=nPx*1.4;mz+=nPz*1.4;}
+      if(w==='rear-blind'){const bx=cam.position.x-nPx*14,bz=cam.position.z-nPz*14;mx+=(bx-ep.x)*0.035;mz+=(bz-ep.z)*0.035;}
+      if(w==='stationary'){mx+=nPx*0.6;mz+=nPz*0.6;}
+      if(w==='trigger-discipline'){mx+=pX*Math.sin(t*9)*0.6;mz+=pZ*Math.cos(t*9)*0.6;}
+      if(w==='no-escape-dash'){mx+=nPx*1.5;mz+=nPz*1.5;}
+      if(w==='ignores-melee'&&dist<4){mx+=nPx*1.2;mz+=nPz*1.2;}
+    });
+    if(hp<20){mx+=nPx*2;mz+=nPz*2;}
+    cl.speed=6.5;
+  }
+  // === MAP KNOWLEDGE: use arena geometry at phase 3+ ===
+  if(cl.adaptPhase>=3){
+    // Seek flank cover for advantageous angle
+    const fc=MapK.flankCover(ep.x,ep.z,cam.position.x,cam.position.z);
+    if(fc){mx+=(fc[0]-ep.x)*0.012*g.flank;mz+=(fc[2]-ep.z)*0.012*g.flank;}
+    // At low HP, retreat toward nearest cover
+    if(cl.hp<cl.maxHp*0.3){const nc=MapK.nearestCover(ep.x,ep.z);if(nc.dist>2){mx+=(nc.pos[0]-ep.x)*0.04;mz+=(nc.pos[2]-ep.z)*0.04;}}
+    // Phase 4+: use ambush spots to cut off player paths
+    if(cl.adaptPhase>=4&&MapK.ambushSpots.length>0){
+      const amb=MapK.ambushSpots[0].pos;mx+=(amb[0]-ep.x)*0.008;mz+=(amb[2]-ep.z)*0.008;}
+  }
+  const ml=Math.sqrt(mx*mx+mz*mz)||1;
+  ep.x+=mx/ml*cl.speed*dt;ep.z+=mz/ml*cl.speed*dt;
+  ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);
+
+  // === AMMO + HEAT (identical to player mechanics) ===
+  if(cl.cloneReloading){cl.cloneReloadTimer-=dt;if(cl.cloneReloadTimer<=0){cl.cloneAmmo=cl.cloneMaxAmmo;cl.cloneReloading=false;}}
+  if(cl.cloneOverheated){cl.cloneHeat=Math.max(0,cl.cloneHeat-20*dt);if(cl.cloneHeat<=0)cl.cloneOverheated=false;}
+  else cl.cloneHeat=Math.max(0,cl.cloneHeat-12*dt);
+  cl.cloneDashCd=Math.max(0,cl.cloneDashCd-dt);
+  cl.cloneNadeCd=Math.max(0,cl.cloneNadeCd-dt);
+  cl.cloneMeleeCd=Math.max(0,cl.cloneMeleeCd-dt);
+  cl.comboTimer=Math.max(0,cl.comboTimer-dt);
+
+  // === SHOOTING (25 dmg — same as player body shot) ===
+  const canShoot=!cl.cloneReloading&&!cl.cloneOverheated&&cl.cloneAmmo>0;
+  const fireInt=[0.9,0.45,0.22,0.14,0.11,0.1][Math.min(cl.adaptPhase,5)];
+  if(canShoot&&now-cl.lastShot>fireInt&&dist<40){
+    cl.lastShot=now;cl.cloneAmmo--;cl.shotsFiredByClone++;
+    cl.cloneHeat=Math.min(100,cl.cloneHeat+4);
+    if(cl.cloneHeat>=100)cl.cloneOverheated=true;
+    const bAcc=[0.06,0.14,0.24,0.36,0.46,0.56][Math.min(cl.adaptPhase,5)];
+    let hc=bAcc+cl.learnRate*0.1+Math.min(0.1,cl.consHits*0.02);
+    hc*=Math.max(0.3,1-dist/45);
+    if(cl.adaptPhase>=3)hc+=0.05;
+    if(cl.pPred>0.3&&cl.adaptPhase>=2)hc+=cl.pPred*0.1;
+    hc+=cl.versatility*0.01;
+    // Smart heat management at phase 3+
+    if(cl.adaptPhase>=3&&cl.cloneHeat>75){/* skip shot to cool */}
+    else if(Math.random()<hc){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;}
+    else{cl.consHits=0;cl.consMiss++;}
+    spawnFlash(ep.clone().add(new THREE.Vector3(0,1.1,0)).add(toP.clone().multiplyScalar(0.6)),cl.adaptPhase>=3?0x00ffc8:0x008866);
+  }
+  // Reload: tactical at p2+, panic at p0-1
+  if(cl.cloneAmmo<=0&&!cl.cloneReloading){cl.cloneReloading=true;cl.cloneReloadTimer=1.3;}
+  else if(cl.adaptPhase>=2&&cl.cloneAmmo<8&&!cl.cloneReloading&&now-cl.lastShot>0.6){cl.cloneReloading=true;cl.cloneReloadTimer=1.3;}
+
+  // === DASH (identical: 3s cd, same speed/dur) ===
+  if(cl.cloneDashCd<=0&&cl.adaptPhase>=1){
+    let doDash=false,ddx=0,ddz=0;
+    if(cl.adaptPhase===1&&dist<6&&Math.random()<0.025){doDash=true;ddx=pX*(Math.random()-0.5)*2;ddz=pZ*(Math.random()-0.5)*2;}
+    if(cl.adaptPhase>=2&&now-A.lastDmgT<0.3&&Math.random()<0.35){doDash=true;ddx=-nPx+pX*(Math.random()-0.5);ddz=-nPz+pZ*(Math.random()-0.5);}
+    if(cl.adaptPhase>=3&&dist>3&&dist<8&&cl.cloneMeleeCd<=0.5&&Math.random()<0.04){doDash=true;ddx=nPx;ddz=nPz;cl.comboState='dash';cl.comboTimer=0.8;}
+    if(cl.adaptPhase>=4&&Math.random()<0.03){doDash=true;
+      if(cl.pDodge.includes('left')){ddx=pX;ddz=pZ;}else if(cl.pDodge.includes('right')){ddx=-pX;ddz=-pZ;}else{ddx=nPx;ddz=nPz;}}
+    if(cl.adaptPhase>=5&&Math.random()<0.035){doDash=true;ddx=predVx*15+nPx*0.5;ddz=predVz*15+nPz*0.5;}
+    if(doDash){cl.cloneDashCd=cl.cloneDashCD_MAX;const dl=Math.sqrt(ddx*ddx+ddz*ddz)||1;
+      ep.x+=ddx/dl*DASH_SPD*DASH_DUR;ep.z+=ddz/dl*DASH_SPD*DASH_DUR;
+      ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);
+      spawnFlash(ep.clone().add(new THREE.Vector3(0,1,0)),0x00aaff);}
+  }
+  // === GRENADE (identical: 5s cd, same damage) ===
+  if(cl.cloneNadeCd<=0&&cl.adaptPhase>=2){
+    let doNade=false;let nt=cam.position.clone();
+    if(cl.adaptPhase===2&&dist<18&&dist>5&&Math.random()<0.012){doNade=true;}
+    if(cl.adaptPhase>=3&&dist<20&&dist>4&&Math.random()<0.018){doNade=true;nt.x+=predVx*8;nt.z+=predVz*8;}
+    if(cl.adaptPhase>=4&&cl.pClusters&&cl.pClusters.length>0&&Math.random()<0.01){doNade=true;const fv=cl.pClusters[Math.floor(Math.random()*Math.min(cl.pClusters.length,3))];nt.set(fv.x,0,fv.z);}
+    if(cl.adaptPhase>=5&&Math.random()<0.022){doNade=true;nt.x=cam.position.x+predVx*15;nt.z=cam.position.z+predVz*15;}
+    if(doNade){cl.cloneNadeCd=cl.cloneNadeCD_MAX;nt.y=0;spawnGrenade(ep.clone().add(new THREE.Vector3(0,1.5,0)),nt,true);}
+  }
+  // === MELEE (identical: 2s cd, 60 dmg, 3.5 range) ===
+  if(cl.cloneMeleeCd<=0&&cl.adaptPhase>=1&&dist<cl.cloneMeleeRange){
+    let doMelee=false;
+    if(cl.adaptPhase===1&&Math.random()<0.08)doMelee=true;
+    if(cl.adaptPhase>=2)doMelee=true;
+    if(cl.comboState==='dash'&&cl.comboTimer>0)doMelee=true;
+    if(doMelee){cl.cloneMeleeCd=cl.cloneMeleeCD_MAX;playerDmg(cl.cloneMeleeDmg,ep);
+      spawnHitParts(cam.position.clone().add(new THREE.Vector3(0,0.5,-0.3)),0xff00aa);cl.comboState='';}
+  }
+  // === LIVE ADAPTATION: adjust genome in real-time ===
+  if(cl.adaptPhase>=3&&cl.shotsFiredByClone>10){
+    const la=cl.shotsHitByClone/cl.shotsFiredByClone;
+    if(la<0.2&&g.engDist>5)g.engDist-=0.15*dt;
+    if(la>0.4)g.engDist+=0.08*dt;
+  }
+}
+
+// ================================================================
+// PLAYER MECHANICS
+// ================================================================
+function playerShoot(){
+  if(reloading||ammo<=0||GS!=='playing'||overheated)return;
+  ammo--;heat=Math.min(100,heat+4);
+  if(heat>=100){overheated=true;A.heatOverheatCount++;document.getElementById('heatText').style.display='block';}
+  updateAmmo();updateHeat();
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
+  spawnFlash(cam.position.clone().add(fwd.clone().multiplyScalar(0.4)).add(new THREE.Vector3(0.12,-0.04,0)),0xffaa00);
+  let hit=false,hs=false,hd=100;
+  enemies.forEach(e=>{
+    if(e.hp<=0)return;
+    const toE=new THREE.Vector3().subVectors(e.mesh.position,cam.position);
+    const proj=toE.dot(fwd);if(proj<0||proj>50)return;
+    if(toE.clone().sub(fwd.clone().multiplyScalar(proj)).length()<0.5&&proj>0){
+      const hY=cam.position.y+fwd.y*proj,isH=hY>e.mesh.position.y+1.5;
+      const dmg=isH?55:25;e.hp-=dmg;hit=true;hs=isH;hd=proj;A.dmgD+=dmg;
+      if(!e.firstEng){e.firstEng=true;A.reacT.push(clock.elapsedTime-e.spawnTime);}
+      spawnHitParts(e.mesh.position.clone().add(new THREE.Vector3(0,isH?1.75:1,0)),isH?0xff0000:0xff6600);
+      if(e.hp<=0)killE(e);
+    }
+  });
+  recShot(hit,hs,hd);if(ammo<=0)reload();
+  pitch+=0.01;wRecoil=1;
+}
+
+function doDash(){
+  if(dashCd>0||GS!=='playing')return;
+  dashCd=DASH_CD;dashActive=true;dashTimer=DASH_DUR;
+  const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  dashDir.set(0,0,0);
+  const mi=moveInput;const keys=window._keys||{};
+  let dx=mi.x,dz=mi.y;
+  if(keys['w'])dz=-1;if(keys['s'])dz=1;if(keys['a'])dx=-1;if(keys['d'])dx=1;
+  if(Math.abs(dx)+Math.abs(dz)<0.1)dashDir.copy(fwd);
+  else{dashDir.add(right.clone().multiplyScalar(dx));dashDir.add(fwd.clone().multiplyScalar(-dz));dashDir.normalize();}
+  recDash();
+  document.getElementById('dashOv').style.opacity='1';
+  setTimeout(()=>document.getElementById('dashOv').style.opacity='0',150);
+}
+
+function throwNade(){
+  if(nadeCd>0||GS!=='playing')return;
+  nadeCd=NADE_CD;
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
+  const target=cam.position.clone().add(fwd.multiplyScalar(15));
+  target.y=0;
+  const nearCount=enemies.filter(e=>e.hp>0&&e.mesh.position.distanceTo(target)<6).length;
+  recNade(target,nearCount);
+  spawnGrenade(cam.position.clone().add(new THREE.Vector3(0,1.3,0)),target,false);
+}
+
+function spawnGrenade(from,target,isClone){
+  const geo=new THREE.SphereGeometry(0.12,6,6);
+  const mat=new THREE.MeshBasicMaterial({color:isClone?0x00ffc8:0xff6600,transparent:true,opacity:0.9});
+  const m=new THREE.Mesh(geo,mat);m.position.copy(from);scene.add(m);
+  const dir=new THREE.Vector3().subVectors(target,from);
+  const dist=dir.length();dir.normalize();
+  const vel=dir.multiplyScalar(dist*2.5);vel.y=4;
+  grenades.push({mesh:m,vel,life:0.6,isClone,target});
+}
+
+function doMelee(){
+  if(meleeCd>0||GS!=='playing')return;
+  meleeCd=MELEE_CD;
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
+  let hit=false;
+  enemies.forEach(e=>{
+    if(e.hp<=0)return;
+    const d=e.mesh.position.distanceTo(cam.position);
+    if(d<MELEE_RANGE){
+      const toE=new THREE.Vector3().subVectors(e.mesh.position,cam.position).normalize();
+      if(toE.dot(fwd)>0.4){
+        e.hp-=MELEE_DMG;A.dmgD+=MELEE_DMG;hit=true;
+        spawnHitParts(e.mesh.position.clone().add(new THREE.Vector3(0,1.2,0)),0xff00aa);
+        if(e.hp<=0)killE(e);
+      }
+    }
+  });
+  recMelee(hit);
+  // Visual slash
+  spawnFlash(cam.position.clone().add(fwd.clone().multiplyScalar(1.5)).add(new THREE.Vector3(0,0.5,0)),0xff00aa);
+}
+
+function playerDmg(dmg,fromPos){
+  hp=Math.max(0,hp-dmg);A.dmgT+=dmg;
+  const ang=Math.atan2(fromPos.z-cam.position.z,fromPos.x-cam.position.x)-yaw;
+  A.dmgTH.push({t:clock.elapsedTime,amt:dmg,px:cam.position.x,pz:cam.position.z,a:ang});
+  A.lastDmgT=clock.elapsedTime;
+  updateHp();
+  const ov=document.getElementById('dmgOv');
+  ov.style.background=`radial-gradient(ellipse at center,transparent 30%,rgba(255,0,0,${Math.min(0.45,dmg/55)}))`;
+  ov.style.opacity=1;setTimeout(()=>ov.style.opacity=0,100);
+  if(hp<=0)gameOver(false);
+}
+
+function killE(e){
+  kills++;score+=e.type==='clone'?1500:e.type==='heavy'?200:100;
+  A.killPos.push({x:cam.position.x,z:cam.position.z});
+  document.getElementById('killC').textContent=`${kills} ELIMINATED`;
+  document.getElementById('scoreD').textContent=score;
+  spawnDeathP(e.mesh.position.clone());scene.remove(e.mesh);
+  // Health drop
+  if(e.type!=='clone'&&Math.random()<0.4)spawnPickup(e.mesh.position.clone());
+  if(e.type==='clone'){cloneActive=false;setTimeout(()=>gameOver(true),1200);}
+}
+
+function reload(){if(reloading||ammo===MX)return;reloading=true;A.reloadT.push(clock.elapsedTime);
+  if(ammo===0)A.panicRld++;else A.tacRld++;
+  document.getElementById('ammoC').textContent='...';
+  setTimeout(()=>{ammo=MX;reloading=false;updateAmmo();},1300);}
+
+// ================================================================
+// PICKUPS
+// ================================================================
+function spawnPickup(pos){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),new THREE.MeshBasicMaterial({color:0x00ff88,transparent:true,opacity:0.7}));
+  pos.y=0.5;m.position.copy(pos);scene.add(m);
+  pickups.push({mesh:m,life:15,type:'health'});
+}
+function updatePickups(dt){
+  for(let i=pickups.length-1;i>=0;i--){
+    const p=pickups[i];p.life-=dt;
+    p.mesh.rotation.y+=dt*2;p.mesh.position.y=0.5+Math.sin(clock.elapsedTime*2)*0.15;
+    if(p.mesh.position.distanceTo(cam.position)<1.5){
+      if(p.type==='health'){hp=Math.min(100,hp+20);updateHp();}
+      scene.remove(p.mesh);pickups.splice(i,1);continue;
+    }
+    if(p.life<=0){scene.remove(p.mesh);pickups.splice(i,1);}
+  }
+}
+
+// ================================================================
+// VFX
+// ================================================================
+function spawnFlash(pos,c=0xffaa00){const m=new THREE.Mesh(new THREE.SphereGeometry(0.1,6,6),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:1}));m.position.copy(pos);scene.add(m);tParts.push({mesh:m,life:0.05,ml:0.05});}
+function spawnHitParts(pos,c){for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.04,0.04),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:1}));m.position.copy(pos);scene.add(m);tParts.push({mesh:m,life:0.35,ml:0.35,vel:new THREE.Vector3((Math.random()-0.5)*3,Math.random()*3,(Math.random()-0.5)*3)});}}
+function spawnDeathP(pos){for(let i=0;i<15;i++){const s=0.03+Math.random()*0.07;const m=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(Math.random()*0.1,0.7,0.5),transparent:true,opacity:1}));m.position.copy(pos).add(new THREE.Vector3(0,1,0));scene.add(m);tParts.push({mesh:m,life:0.9,ml:0.9,vel:new THREE.Vector3((Math.random()-0.5)*5,Math.random()*4+2,(Math.random()-0.5)*5),grav:true});}}
+function updateParts(dt){
+  fObjs.forEach(p=>{p.position.y=p.userData.fy+Math.sin(clock.elapsedTime*p.userData.fs)*0.2;p.rotation.y+=dt*0.35;});
+  for(let i=tParts.length-1;i>=0;i--){const p=tParts[i];p.life-=dt;
+    if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();tParts.splice(i,1);continue;}
+    p.mesh.material.opacity=p.life/p.ml;if(p.vel){p.mesh.position.add(p.vel.clone().multiplyScalar(dt));if(p.grav)p.vel.y-=9.8*dt;}p.mesh.scale.setScalar(p.life/p.ml);}
+  // Grenades
+  for(let i=grenades.length-1;i>=0;i--){
+    const g=grenades[i];g.life-=dt;g.vel.y-=9.8*dt;g.mesh.position.add(g.vel.clone().multiplyScalar(dt));
+    if(g.mesh.position.y<=0||g.life<=0){
+      // Explode
+      const ep=g.mesh.position.clone();ep.y=0;
+      spawnDeathP(ep);
+      if(g.isClone){if(ep.distanceTo(cam.position)<6)playerDmg(30,ep);}
+      else{enemies.forEach(e=>{if(e.hp>0&&e.mesh.position.distanceTo(ep)<6){const d=Math.max(20,50-e.mesh.position.distanceTo(ep)*8);e.hp-=d;A.dmgD+=d;if(e.hp<=0)killE(e);}});}
+      scene.remove(g.mesh);grenades.splice(i,1);
+    }
+  }
+}
+
+// ================================================================
+// WAVES
+// ================================================================
+const wCfg=[
+  {e:[{t:'grunt',n:5}],msg:'WAVE 1 — RECON'},
+  {e:[{t:'grunt',n:5},{t:'fast',n:3}],msg:'WAVE 2 — ESCALATE'},
+  {e:[{t:'grunt',n:4},{t:'heavy',n:2},{t:'fast',n:3}],msg:'WAVE 3 — ASSAULT'},
+  {e:[{t:'grunt',n:3},{t:'heavy',n:3},{t:'fast',n:4}],msg:'WAVE 4 — ONSLAUGHT'},
+];
+
+function startWave(n){
+  wave=n;if(n>=wCfg.length){waveActive=true;compA();Sim.buildPlayerModel();Sim.start();showCloneWarn();return;}
+  announce(wCfg[n].msg);document.getElementById('waveT').textContent=`WAVE ${n+1}`;
+  if(n>=1&&!Sim.running){compA();Sim.buildPlayerModel();Sim.start();}
+  else if(n>=1&&Sim.running){compA();Sim.buildPlayerModel();}
+  setTimeout(()=>{wCfg[n].e.forEach(g=>{for(let i=0;i<g.n;i++){const a=Math.random()*Math.PI*2,d=16+Math.random()*16;enemies.push(mkEnemy(Math.cos(a)*d,Math.sin(a)*d,g.t));}});waveActive=false;},2000);
+}
+function announce(m){const e=document.getElementById('waveAnn');e.textContent=m;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2500);}
+function showCloneWarn(){
+  Sim.target=Sim.simCount+2000;Sim.next();
+  document.getElementById('cloneWarn').style.opacity=1;
+  setTimeout(()=>{document.getElementById('cloneWarn').style.opacity=0;showAnalytics();},3500);
+}
+
+function showAnalytics(){
+  compA();const a=A,tt=a.tMove+a.tStill||1;
+  const dp=a.posH.length+a.aimH.length+a.shotT.length+a.dmgTH.length+a.velH.length+a.dashTimestamps.length+a.grenadeTimestamps.length+a.meleeTimestamps.length;
+  document.getElementById('analyticContent').innerHTML=`
+    <div class="sg"><h3>MOVEMENT — ${a.posH.length} SAMPLES</h3>
+    <div class="sr"><span class="sl">Distance</span><span class="sv">${a.dist.toFixed(1)}m</span></div>
+    <div class="sr"><span class="sl">Speed Avg/Max</span><span class="sv">${a.avgSpd.toFixed(2)}/${a.maxSpd.toFixed(2)}</span></div>
+    <div class="sr"><span class="sl">Moving</span><span class="sv">${(a.tMove/tt*100).toFixed(0)}%</span></div>
+    <div class="sr"><span class="sl">Dir Changes</span><span class="sv">${a.dirChg} (${a.mEntropy.toFixed(1)}/s)</span></div>
+    <div class="sr"><span class="sl">Strafe L/R</span><span class="sv">${a.sL}/${a.sR}</span></div>
+    <div class="sr"><span class="sl">Dodge</span><span class="sv d">${a.dodgePattern.toUpperCase()}</span></div>
+    <div class="sr"><span class="sl">Predictability</span><span class="sv d">${(a.movePred*100).toFixed(0)}%</span></div>
+    <div class="sr"><span class="sl">Cover Use</span><span class="sv">${(a.coverScore/tt*100).toFixed(0)}%</span></div>
+    </div>
+    <div class="sg"><h3>AIM — ${a.aimH.length} SAMPLES</h3>
+    <div class="sr"><span class="sl">Aim Stability</span><span class="sv">${a.aimStab.toFixed(0)}/100</span></div>
+    <div class="sr"><span class="sl">Tracking</span><span class="sv">${a.aimTrackSmooth.toFixed(0)}/100</span></div>
+    <div class="sr"><span class="sl">Flick Shots</span><span class="sv">${a.aimSnaps}</span></div>
+    <div class="sr"><span class="sl">Profile</span><span class="sv">${a.aimProfile.toUpperCase()}</span></div>
+    </div>
+    <div class="sg"><h3>COMBAT — ${a.shotsFired} SHOTS</h3>
+    <div class="sr"><span class="sl">Accuracy</span><span class="sv">${a.acc.toFixed(1)}%</span></div>
+    <div class="sr"><span class="sl">Headshot Rate</span><span class="sv">${a.hsRate.toFixed(1)}%</span></div>
+    <div class="sr"><span class="sl">Burst Avg</span><span class="sv">${a.avgBurst.toFixed(1)}</span></div>
+    <div class="sr"><span class="sl">DPS</span><span class="sv">${a.dps.toFixed(1)}</span></div>
+    <div class="sr"><span class="sl">Dmg Dealt/Taken</span><span class="sv">${a.dmgD}/${a.dmgT}</span></div>
+    <div class="sr"><span class="sl">Overheats</span><span class="sv">${a.heatOverheatCount}</span></div>
+    </div>
+    <div class="sg"><h3>ABILITIES</h3>
+    <div class="sr"><span class="sl">Dashes</span><span class="sv">${a.dashCount} (${a.dashWhenLowHp} defensive)</span></div>
+    <div class="sr"><span class="sl">Grenades</span><span class="sv">${a.grenadeCount} (${a.grenadesAtGroups} at groups)</span></div>
+    <div class="sr"><span class="sl">Melee Attacks</span><span class="sv">${a.meleeCount} (${a.meleeHits} hit)</span></div>
+    <div class="sr"><span class="sl">Dash→Melee Combos</span><span class="sv d">${a.meleeAfterDash}</span></div>
+    <div class="sr"><span class="sl">Ability Combos</span><span class="sv">${a.abilityComboPatterns.length}</span></div>
+    </div>
+    <div class="sg"><h3>ENGAGEMENT</h3>
+    <div class="sr"><span class="sl">Range</span><span class="sv">${a.avgEngDist.toFixed(1)}m (${a.prefRange.toUpperCase()})</span></div>
+    <div class="sr"><span class="sl">Aggression</span><span class="sv">${(a.aggScore*100).toFixed(0)}%</span></div>
+    <div class="sr"><span class="sl">Reaction</span><span class="sv">${a.avgReac.toFixed(2)}s (best ${a.fastReac.toFixed(2)}s)</span></div>
+    <div class="sr"><span class="sl">Style</span><span class="sv d">${a.playstyle.toUpperCase()}</span></div>
+    </div>
+    <div class="sg"><h3>WEAKNESSES</h3>
+    <div class="sr"><span class="sl">Found</span><span class="sv d">${a.weaknesses.length} — ${a.weaknesses.join(', ').toUpperCase()||'NONE'}</span></div>
+    <div class="sr"><span class="sl">Strengths</span><span class="sv">${a.strengths.join(', ').toUpperCase()||'NONE'}</span></div>
+    </div>
+    <div class="sg"><h3>SIMULATION ENGINE</h3>
+    <div class="sr"><span class="sl">Simulations Run</span><span class="sv d">${Sim.simCount}</span></div>
+    <div class="sr"><span class="sl">Generations Evolved</span><span class="sv d">${Sim.gen}</span></div>
+    <div class="sr"><span class="sl">Clone IQ</span><span class="sv d">${Sim.iq}</span></div>
+    <div class="sr"><span class="sl">Versatility</span><span class="sv d">${Sim.versatility}/20 archetypes beaten</span></div>
+    <div class="sr"><span class="sl">Genome Parameters</span><span class="sv">${Object.keys(Sim.genome).length}</span></div>
+    <div class="sr"><span class="sl">Best Score</span><span class="sv d">${Sim.bestScore.toFixed(0)}</span></div>
+    <div class="sr"><span class="sl">Data Points</span><span class="sv">${dp}</span></div>
+    </div>
+    <div class="sg"><h3>SELF-PLAY & DYNASTY</h3>
+    <div class="sr"><span class="sl">Genome vs Genome Fights</span><span class="sv d">${Sim.totalGvG}</span></div>
+    <div class="sr"><span class="sl">Dynasty Champions</span><span class="sv d">${Sim.dynasty.length}</span></div>
+    <div class="sr"><span class="sl">Elite Pool Size</span><span class="sv">${Sim.elitePool.length}</span></div>
+    <div class="sr"><span class="sl">vs Dynasty Win Rate</span><span class="sv d">${Sim.selfPlayTotal>0?Math.floor(Sim.selfPlayWins/Sim.selfPlayTotal*100)+'%':'—'}</span></div>
+    <div class="sr"><span class="sl">Last Gen Leap</span><span class="sv">${Sim.genLeap>0?'+':''}${Sim.genLeap.toFixed(1)}</span></div>
+    <div class="sr"><span class="sl">Arms Race Trend</span><span class="sv d">${Sim.armsRace.length>2?(Sim.armsRace[Sim.armsRace.length-1].score>Sim.armsRace[Math.floor(Sim.armsRace.length/2)].score?'IMPROVING':'PLATEAU'):'EARLY'}</span></div>
+    <div class="sr"><span class="sl">Training Regime</span><span class="sv">archetypes + self-play + dynasty + stress</span></div>
+    </div>`;
+  document.getElementById('analyticScr').style.display='flex';GS='analytics';
+}
+
+function launchClone(){
+  document.getElementById('analyticScr').style.display='none';GS='playing';
+  announce('FINAL — YOUR ECHO HUNTS');document.getElementById('waveT').textContent='ECHO WAVE';
+  document.getElementById('cloneIQ').style.opacity='1';
+  hp=Math.min(100,hp+45);updateHp();ammo=MX;reloading=false;updateAmmo();
+  heat=0;overheated=false;updateHeat();dashCd=0;nadeCd=0;meleeCd=0;
+  setTimeout(()=>{enemies.push(mkClone());cloneActive=true;Sim.target+=3000;Sim.next();},2000);
+}
+
+function gameOver(won){
+  GS='result';Sim.running=false;compA();
+  document.getElementById('rTitle').textContent=won?'ECHO DEFEATED':'ECHO PREVAILS';
+  document.getElementById('rSub').textContent=won?'You defied the machine. Your echo could not contain you.':'Your echo mastered every angle. It knew you better than yourself.';
+  document.getElementById('rStats').textContent=`Score: ${score} | Accuracy: ${A.acc.toFixed(1)}% | Style: ${A.playstyle.toUpperCase()}\nSims: ${Sim.simCount} | IQ: ${Sim.iq} | Versatility: ${Sim.versatility}/20\nGenome vs Genome: ${Sim.totalGvG} | Dynasty: ${Sim.dynasty.length} champions\nDashes: ${A.dashCount} | Grenades: ${A.grenadeCount} | Melee: ${A.meleeCount}\nWeaknesses: ${A.weaknesses.length} | Generations: ${Sim.gen}`;
+  document.getElementById('resultScr').style.display='flex';
+}
+
+// ================================================================
+// INPUT
+// ================================================================
+let moveInput={x:0,y:0},aimTid=null,aimLX=0,aimLY=0,moveTid=null,shootI=null;
+function initCtrls(){
+  const mj=document.getElementById('mJoy'),ms=document.getElementById('mStk');
+  mj.addEventListener('touchstart',e=>{e.preventDefault();moveTid=e.changedTouches[0].identifier;});
+  window.addEventListener('touchmove',e=>{for(const t of e.changedTouches){
+    if(t.identifier===moveTid){const r=mj.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+      let dx=(t.clientX-cx)/(r.width/2),dy=(t.clientY-cy)/(r.height/2);const l=Math.sqrt(dx*dx+dy*dy);if(l>1){dx/=l;dy/=l;}
+      moveInput.x=dx;moveInput.y=dy;ms.style.transform=`translate(calc(-50% + ${dx*26}px),calc(-50% + ${dy*26}px))`;}
+    if(t.identifier===aimTid){yaw-=(t.clientX-aimLX)*sensitivity;pitch-=(t.clientY-aimLY)*sensitivity;pitch=Math.max(-Math.PI/3,Math.min(Math.PI/3,pitch));aimLX=t.clientX;aimLY=t.clientY;}
+  }});
+  window.addEventListener('touchend',e=>{for(const t of e.changedTouches){
+    if(t.identifier===moveTid){moveTid=null;moveInput.x=0;moveInput.y=0;ms.style.transform='translate(-50%,-50%)';}
+    if(t.identifier===aimTid)aimTid=null;}});
+  document.getElementById('aim').addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];aimTid=t.identifier;aimLX=t.clientX;aimLY=t.clientY;});
+  const fb=document.getElementById('fireBtn');
+  fb.addEventListener('touchstart',e=>{e.preventDefault();playerShoot();shootI=setInterval(playerShoot,100);});
+  fb.addEventListener('touchend',e=>{e.preventDefault();clearInterval(shootI);});
+  fb.addEventListener('touchcancel',()=>clearInterval(shootI));
+  document.getElementById('rldBtn').addEventListener('touchstart',e=>{e.preventDefault();reload();});
+  document.getElementById('dashBtn').addEventListener('touchstart',e=>{e.preventDefault();doDash();});
+  document.getElementById('nadeBtn').addEventListener('touchstart',e=>{e.preventDefault();throwNade();});
+  document.getElementById('meleeBtn').addEventListener('touchstart',e=>{e.preventDefault();doMelee();});
+  const keys={};
+  window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){e.preventDefault();playerShoot();}if(e.key==='r')reload();if(e.key==='q')doDash();if(e.key==='e')throwNade();if(e.key==='f')doMelee();});
+  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+  window.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas){yaw-=e.movementX*0.002;pitch-=e.movementY*0.002;pitch=Math.max(-Math.PI/3,Math.min(Math.PI/3,pitch));}});
+  canvas.addEventListener('click',()=>{if(GS==='playing')canvas.requestPointerLock();});
+  canvas.addEventListener('mousedown',()=>{if(document.pointerLockElement===canvas){playerShoot();shootI=setInterval(playerShoot,100);}});
+  canvas.addEventListener('mouseup',()=>clearInterval(shootI));
+  window._keys=keys;
+}
+
+// ================================================================
+// HUD
+// ================================================================
+function updateHp(){document.getElementById('hpFill').style.width=hp+'%';document.getElementById('hpText').textContent=`SHIELD ${Math.ceil(hp)}`;}
+function updateAmmo(){document.getElementById('ammoC').textContent=ammo;}
+function updateHeat(){
+  document.getElementById('heatFill').style.width=heat+'%';
+  if(overheated)document.getElementById('heatFill').style.background='#ff0044';
+  else document.getElementById('heatFill').style.background='linear-gradient(90deg,#ff6600,#ff0044)';
+}
+function updateCooldowns(){
+  document.getElementById('dashCd').style.height=(dashCd>0?Math.min(100,dashCd/DASH_CD*100):0)+'%';
+  document.getElementById('nadeCd').style.height=(nadeCd>0?Math.min(100,nadeCd/NADE_CD*100):0)+'%';
+  document.getElementById('meleeCd').style.height=(meleeCd>0?Math.min(100,meleeCd/MELEE_CD*100):0)+'%';
+}
+const mmCtx=document.getElementById('mmC').getContext('2d');
+function updateMM(){
+  mmCtx.clearRect(0,0,80,80);mmCtx.fillStyle='rgba(0,0,0,0.3)';mmCtx.fillRect(0,0,80,80);
+  const px=40+(cam.position.x/40)*37,pz=40+(cam.position.z/40)*37;
+  mmCtx.fillStyle='#00ffc8';mmCtx.fillRect(px-1.5,pz-1.5,3,3);
+  mmCtx.strokeStyle='#00ffc8';mmCtx.beginPath();mmCtx.moveTo(px,pz);
+  mmCtx.lineTo(px+Math.sin(yaw)*6,pz-Math.cos(yaw)*6);mmCtx.stroke();
+  enemies.forEach(e=>{if(e.hp<=0)return;const ex=40+(e.mesh.position.x/40)*37,ez=40+(e.mesh.position.z/40)*37;
+    mmCtx.fillStyle=e.type==='clone'?'#00ffc8':'#ff0044';mmCtx.fillRect(ex-1,ez-1,2.5,2.5);});
+  pickups.forEach(p=>{const px2=40+(p.mesh.position.x/40)*37,pz2=40+(p.mesh.position.z/40)*37;
+    mmCtx.fillStyle='#00ff88';mmCtx.fillRect(px2-1,pz2-1,2,2);});
+}
+
+// ================================================================
+// GAME LOOP
+// ================================================================
+function update(){
+  if(GS!=='playing'){R.render(scene,cam);updateParts(0.016);requestAnimationFrame(update);return;}
+  const dt=Math.min(clock.getDelta(),0.05);fc++;
+  const keys=window._keys||{};let mx=moveInput.x,mz=moveInput.y;
+  if(keys['w']||keys['arrowup'])mz=-1;if(keys['s']||keys['arrowdown'])mz=1;
+  if(keys['a']||keys['arrowleft'])mx=-1;if(keys['d']||keys['arrowright'])mx=1;
+
+  // Dash
+  if(dashActive){
+    cam.position.add(dashDir.clone().multiplyScalar(DASH_SPD*dt));
+    dashTimer-=dt;if(dashTimer<=0)dashActive=false;
+  } else {
+    const fwd=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+    const mv=new THREE.Vector3();mv.add(rt.clone().multiplyScalar(mx));mv.add(fwd.clone().multiplyScalar(-mz));
+    if(mv.length()>0)mv.normalize();
+    cam.position.add(mv.multiplyScalar(moveSpeed*dt));
+  }
+  cam.position.x=THREE.MathUtils.clamp(cam.position.x,-38,38);
+  cam.position.z=THREE.MathUtils.clamp(cam.position.z,-38,38);cam.position.y=1.7;
+  cam.rotation.set(0,0,0);cam.rotateY(yaw);cam.rotateX(pitch);
+
+  // Weapon bob
+  const isM=Math.abs(mx)>0.1||Math.abs(mz)>0.1;
+  if(isM)wBob+=dt*8;else wBob+=dt*1.2;wRecoil*=0.8;
+  if(weaponG){weaponG.position.x=Math.sin(wBob)*(isM?0.008:0.002);
+    weaponG.position.y=Math.abs(Math.cos(wBob))*(isM?0.006:0.001)-wRecoil*0.04;weaponG.rotation.x=-wRecoil*0.1;}
+
+  // Cooldowns
+  if(dashCd>0)dashCd-=dt;if(nadeCd>0)nadeCd-=dt;if(meleeCd>0)meleeCd-=dt;
+  // Heat decay
+  if(!overheated)heat=Math.max(0,heat-12*dt);
+  else{heat=Math.max(0,heat-20*dt);if(heat<=0){overheated=false;document.getElementById('heatText').style.display='none';}}
+  updateHeat();updateCooldowns();
+
+  enemies.forEach(e=>{if(e.hp>0)updateEnemyAI(e,dt);});
+  enemies=enemies.filter(e=>e.hp>0);
+  updatePickups(dt);
+
+  if(!waveActive&&enemies.length===0&&waveCd<=0){
+    if(wave<wCfg.length-1){waveActive=true;waveCd=2.5;hp=Math.min(100,hp+20);updateHp();startWave(wave+1);}
+    else if(wave===wCfg.length-1&&!cloneActive){waveActive=true;compA();Sim.buildPlayerModel();if(!Sim.running)Sim.start();showCloneWarn();}
+  }
+  if(waveCd>0)waveCd-=dt;
+
+  recA(dt);updateParts(dt);updateMM();
+  R.render(scene,cam);requestAnimationFrame(update);
+}
+
+function startGame(){
+  document.getElementById('titleScr').style.display='none';
+  ['hud','ctrls','aim','vig','scan'].forEach(id=>document.getElementById(id).style.display='block');
+  GS='playing';A.startTime=clock.elapsedTime;lastP.copy(cam.position);
+  buildEnv();createWeapon();initCtrls();MapK.init();waveActive=true;startWave(0);clock.getDelta();update();
+}
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();R.setSize(innerWidth,innerHeight);});
+(function tl(){if(GS==='title'){R.render(scene,cam);requestAnimationFrame(tl);}})();
+</script>
+</body>
+</html>
