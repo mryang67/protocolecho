@@ -9,11 +9,11 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace}
 #C{width:100%;height:100%;display:block;position:fixed;top:0;left:0}
 #hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;display:none}
-#cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px}
+#cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px}
 #cross::before,#cross::after{content:'';position:absolute;background:rgba(0,255,200,0.8)}
 #cross::before{width:2px;height:100%;left:50%;transform:translateX(-50%)}
 #cross::after{width:100%;height:2px;top:50%;transform:translateY(-50%)}
-#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:5px;height:5px;background:#00ffc8;border-radius:50%}
+#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:3px;background:#00ffc8;border-radius:50%}
 /* Hit marker */
 #hitMarker{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;opacity:0;pointer-events:none;transition:opacity 0.08s}
 #hitMarker::before,#hitMarker::after{content:'';position:absolute;background:#fff}
@@ -53,12 +53,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 #scan{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:7;opacity:0.025;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,200,0.06) 2px,rgba(0,255,200,0.06) 4px);display:none}
 #dashOv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;opacity:0;transition:opacity 0.15s;background:radial-gradient(ellipse at center,rgba(0,180,255,0.08),transparent 60%)}
 /* Joystick — left side */
-#mJoy{position:fixed;bottom:20px;left:20px;width:140px;height:140px;background:rgba(0,255,200,0.05);border:2px solid rgba(0,255,200,0.15);border-radius:50%;z-index:20;display:none}
+#mJoy{position:fixed;bottom:24px;left:50px;width:140px;height:140px;background:rgba(0,255,200,0.05);border:2px solid rgba(0,255,200,0.15);border-radius:50%;z-index:20;display:none}
 #mStk{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;background:rgba(0,255,200,0.2);border:2px solid rgba(0,255,200,0.4);border-radius:50%}
 /* Buttons — all stacked right side */
-#ctrls{position:fixed;bottom:12px;right:12px;z-index:20;display:none;pointer-events:auto}
+#ctrls{position:fixed;bottom:14px;right:36px;z-index:20;display:none;pointer-events:auto}
 .btnRow{display:flex;gap:10px;justify-content:flex-end;margin-bottom:10px}
-#fireBtn{width:96px;height:96px;background:rgba(255,50,50,0.12);border:2px solid rgba(255,50,50,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.8);font-size:14px;letter-spacing:2px}
+#fireBtn{width:110px;height:110px;background:rgba(255,50,50,0.12);border:2px solid rgba(255,50,50,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.8);font-size:16px;letter-spacing:2px}
 #rldBtn{width:62px;height:62px;background:rgba(0,255,200,0.08);border:2px solid rgba(0,255,200,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(0,255,200,0.7);font-size:12px}
 #dashBtn{width:62px;height:62px;background:rgba(0,150,255,0.1);border:2px solid rgba(0,150,255,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(0,180,255,0.8);font-size:12px}
 #nadeBtn{width:62px;height:62px;background:rgba(255,150,0,0.1);border:2px solid rgba(255,150,0,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,150,0,0.8);font-size:12px}
@@ -1242,25 +1242,7 @@ function buildEnv(){
     const t1=new THREE.Mesh(new THREE.BoxGeometry(80,0.12,0.85),trimM);t1.position.set(w.p[0],0.06,w.p[2]);t1.rotation.y=w.r;scene.add(t1);
     const t2=new THREE.Mesh(new THREE.BoxGeometry(80,0.08,0.85),trimM);t2.position.set(w.p[0],5.96,w.p[2]);t2.rotation.y=w.r;scene.add(t2);
   });
-  // Pillars with caps, bases, accent lines
-  const pM=new THREE.MeshStandardMaterial({color:0x2a2a55,roughness:0.4,metalness:0.6});
-  coverPos.forEach(p=>{
-    const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.8,4,12),pM);pillar.position.set(...p);pillar.castShadow=pillar.receiveShadow=true;scene.add(pillar);
-    scene.add(mk(new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.65,0.2,12),pM),p[0],4.1,p[2]));
-    scene.add(mk(new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.12,12),pM),p[0],0.06,p[2]));
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.02,8,24),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:0.2}));
-    ring.position.set(p[0],0.15,p[2]);ring.rotation.x=-Math.PI/2;scene.add(ring);
-    const line=new THREE.Mesh(new THREE.BoxGeometry(0.03,4,0.03),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:0.06}));
-    line.position.set(p[0]+0.55,2,p[2]);scene.add(line);
-  });
-  // Crates with frames
-  const cM=new THREE.MeshStandardMaterial({color:0x302a50,roughness:0.5,metalness:0.5});
-  const eM2=new THREE.MeshStandardMaterial({color:0x3d3560,roughness:0.3,metalness:0.7});
-  [[-6,1,-6],[6,1,6],[-18,1,8],[18,1,-8],[0,1,15],[0,1,-15],[-15,1,0],[15,1,0],[-22,1,-20],[22,1,20]].forEach(p=>{
-    const c=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.9,1.9),cM);c.position.set(...p);c.rotation.y=Math.random()*Math.PI;c.castShadow=c.receiveShadow=true;scene.add(c);
-    scene.add(mk(new THREE.Mesh(new THREE.BoxGeometry(2,0.06,2),eM2),p[0],0.03,p[2]));
-    scene.add(mk(new THREE.Mesh(new THREE.BoxGeometry(2,0.06,2),eM2),p[0],1.97,p[2]));
-  });
+  // Terrain objects removed (no collision)
   // Lighting
   scene.add(new THREE.AmbientLight(0x8888cc,0.7));
   const dl=new THREE.DirectionalLight(0x8899cc,1.2);dl.position.set(20,30,10);dl.castShadow=true;
@@ -1395,12 +1377,12 @@ function mkEnemy(x,z,type='charger'){
   g.scale.set(1.5,1.5,1.5);
   g.position.set(x,0,z);scene.add(g);
   const st={
-    charger:{hp:45,spd:4,dmg:8,si:1.4},
-    strafer:{hp:40,spd:3.5,dmg:6,si:1.2},
-    sniper:{hp:35,spd:1,dmg:14,si:2.5},
-    flanker:{hp:35,spd:5.5,dmg:7,si:1.3},
-    rusher:{hp:50,spd:6,dmg:10,si:0.8},
-    tank:{hp:120,spd:1.5,dmg:15,si:2},
+    charger:{hp:45,spd:4,dmg:5,si:1.6},
+    strafer:{hp:40,spd:3.5,dmg:4,si:1.4},
+    sniper:{hp:35,spd:1,dmg:8,si:3},
+    flanker:{hp:35,spd:5.5,dmg:4,si:1.5},
+    rusher:{hp:50,spd:6,dmg:6,si:1},
+    tank:{hp:120,spd:1.5,dmg:9,si:2.2},
     clone:{hp:100,spd:6.5,dmg:25,si:0.1}
   }[type]||{hp:45,spd:3,dmg:7,si:1.4};
   return{mesh:g,type,hp:st.hp,maxHp:st.hp,speed:st.spd,damage:st.dmg,shootInterval:st.si,lastShot:0,
@@ -1541,13 +1523,13 @@ function updateEnemyAI(e,dt){
   // Shooting — rate and accuracy vary by type
   if(now-e.lastShot>e.shootInterval&&dist<30){
     e.lastShot=now;
-    let hitChance=0.38;
-    if(e.type==='sniper')hitChance=dist<25?0.55:0.4;
-    else if(e.type==='rusher')hitChance=dist<8?0.5:0.25;
-    else if(e.type==='tank')hitChance=0.45;
-    else if(e.type==='strafer')hitChance=0.35;
-    else if(e.type==='flanker')hitChance=dist<10?0.5:0.3;
-    else if(e.type==='charger')hitChance=dist<6?0.45:0.3;
+    let hitChance=0.28;
+    if(e.type==='sniper')hitChance=dist<25?0.4:0.25;
+    else if(e.type==='rusher')hitChance=dist<8?0.35:0.15;
+    else if(e.type==='tank')hitChance=0.32;
+    else if(e.type==='strafer')hitChance=0.25;
+    else if(e.type==='flanker')hitChance=dist<10?0.35:0.2;
+    else if(e.type==='charger')hitChance=dist<6?0.3:0.2;
     if(Math.random()<hitChance){playerDmg(e.damage,ep);A.typeDmgTaken[e.type]=(A.typeDmgTaken[e.type]||0)+e.damage;}
     // Muzzle flash at gun barrel (scaled 1.5x, muzzle at ~1.1 world y, ~1.1 forward)
     const muzzlePos=ep.clone().add(toP.clone().multiplyScalar(1.1)).add(new THREE.Vector3(0,1.3,0));
@@ -1755,7 +1737,7 @@ function playerShoot(){
   if(heat>=100){overheated=true;A.heatOverheatCount++;document.getElementById('heatText').style.display='block';}
   updateAmmo();updateHeat();
   const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
-  spawnFlash(cam.position.clone().add(fwd.clone().multiplyScalar(0.4)).add(new THREE.Vector3(0.12,-0.04,0)),0xffaa00);
+  spawnFlash(cam.position.clone().add(fwd.clone().multiplyScalar(1.5)).add(new THREE.Vector3(0.1,-0.1,0)),0xffaa00);
   let hit=false,hs=false,hd=100;
   enemies.forEach(e=>{
     if(e.hp<=0)return;
@@ -1816,21 +1798,21 @@ function throwNade(){
   if(nadeCd>0||GS!=='playing')return;
   nadeCd=NADE_CD;
   const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
-  const target=cam.position.clone().add(fwd.multiplyScalar(15));
+  const target=cam.position.clone().add(fwd.multiplyScalar(10));
   target.y=0;
-  const nearCount=enemies.filter(e=>e.hp>0&&e.mesh.position.distanceTo(target)<6).length;
+  const nearCount=enemies.filter(e=>e.hp>0&&e.mesh.position.distanceTo(target)<10).length;
   recNade(target,nearCount);
-  spawnGrenade(cam.position.clone().add(new THREE.Vector3(0,1.3,0)),target,false);
+  spawnGrenade(cam.position.clone().add(new THREE.Vector3(0,1,0)),target,false);
 }
 
 function spawnGrenade(from,target,isClone){
-  const geo=new THREE.SphereGeometry(0.12,6,6);
+  const geo=new THREE.SphereGeometry(0.15,6,6);
   const mat=new THREE.MeshBasicMaterial({color:isClone?0x00ffc8:0xff6600,transparent:true,opacity:0.9});
   const m=new THREE.Mesh(geo,mat);m.position.copy(from);scene.add(m);
   const dir=new THREE.Vector3().subVectors(target,from);
   const dist=dir.length();dir.normalize();
-  const vel=dir.multiplyScalar(dist*2.5);vel.y=4;
-  grenades.push({mesh:m,vel,life:0.6,isClone,target});
+  const vel=dir.multiplyScalar(dist*3.5);vel.y=1.5; // flat arc
+  grenades.push({mesh:m,vel,life:0.4,isClone,target});
 }
 
 function doMelee(){return;}
@@ -1935,8 +1917,10 @@ function updateParts(dt){
       // Explode
       const ep=g.mesh.position.clone();ep.y=0;
       spawnDeathP(ep);
-      if(g.isClone){if(ep.distanceTo(cam.position)<6)playerDmg(30,ep);}
-      else{enemies.forEach(e=>{if(e.hp>0&&e.mesh.position.distanceTo(ep)<6){const d=Math.max(20,50-e.mesh.position.distanceTo(ep)*8);e.hp-=d;A.dmgD+=d;if(e.hp<=0)killE(e);}});}
+      if(g.isClone){if(ep.distanceTo(cam.position)<10)playerDmg(30,ep);}
+      else{enemies.forEach(e=>{if(e.hp>0&&e.mesh.position.distanceTo(ep)<10){const d=Math.max(25,60-e.mesh.position.distanceTo(ep)*5);e.hp-=d;A.dmgD+=d;
+        if(e.hpBarFill){const pct=Math.max(0,e.hp/e.maxHp);e.hpBarFill.scale.x=pct;e.hpBarFill.position.x=(pct-1)*0.25;}
+        if(e.hp<=0)killE(e);}});}
       scene.remove(g.mesh);grenades.splice(i,1);
     }
   }
@@ -1945,18 +1929,19 @@ function updateParts(dt){
 // ================================================================
 // WAVES
 // ================================================================
-// Diagnostic waves: each tests specific player behavior
+// Diagnostic waves: each probes specific player behavior for data
 const wCfg=[
-  {e:[{t:'charger',n:5}],                           msg:'WAVE 1 — SCANNING AIM'},
-  {e:[{t:'strafer',n:4},{t:'flanker',n:2}],          msg:'WAVE 2 — SCANNING TRACKING'},
-  {e:[{t:'sniper',n:3},{t:'charger',n:2}],           msg:'WAVE 3 — SCANNING COVER + DASH'},
-  {e:[{t:'rusher',n:4},{t:'flanker',n:3}],            msg:'WAVE 4 — SCANNING PANIC RESPONSE'},
-  {e:[{t:'tank',n:2},{t:'strafer',n:3},{t:'rusher',n:2}], msg:'WAVE 5 — FINAL DIAGNOSTIC'},
+  {e:[{t:'charger',n:5}],                                    msg:'SCAN 1 — AIM PRECISION'},
+  {e:[{t:'strafer',n:4},{t:'flanker',n:2}],                   msg:'SCAN 2 — TARGET TRACKING'},
+  {e:[{t:'sniper',n:3},{t:'charger',n:2}],                    msg:'SCAN 3 — POSITIONING + DASH'},
+  {e:[{t:'rusher',n:4},{t:'flanker',n:3}],                    msg:'SCAN 4 — PRESSURE RESPONSE'},
+  {e:[{t:'tank',n:2},{t:'strafer',n:2},{t:'rusher',n:2}],     msg:'SCAN 5 — TARGET PRIORITY'},
+  {e:[{t:'charger',n:2},{t:'strafer',n:2},{t:'flanker',n:2},{t:'rusher',n:2}], msg:'SCAN 6 — FULL DIAGNOSTIC'},
 ];
 
 function startWave(n){
   wave=n;if(n>=wCfg.length){waveActive=true;compA();Sim.buildPlayerModel();Sim.start();showCloneWarn();return;}
-  announce(wCfg[n].msg);document.getElementById('waveT').textContent=`WAVE ${n+1}`;
+  announce(wCfg[n].msg);document.getElementById('waveT').textContent=`SCAN ${n+1}/6`;
   if(n>=1&&!Sim.running){compA();Sim.buildPlayerModel();Sim.start();}
   else if(n>=1&&Sim.running){compA();Sim.buildPlayerModel();}
   setTimeout(()=>{wCfg[n].e.forEach(g=>{for(let i=0;i<g.n;i++){const a=Math.random()*Math.PI*2,d=16+Math.random()*16;enemies.push(mkEnemy(Math.cos(a)*d,Math.sin(a)*d,g.t));}});waveActive=false;},2000);
@@ -2038,7 +2023,7 @@ function launchClone(){
   document.getElementById('analyticScr').style.display='none';GS='playing';
   announce('FINAL — YOUR ECHO HUNTS');document.getElementById('waveT').textContent='ECHO WAVE';
   document.getElementById('cloneIQ').style.opacity='1';
-  hp=Math.min(100,hp+45);updateHp();ammo=MX;reloading=false;updateAmmo();
+  hp=100;updateHp();ammo=MX;reloading=false;updateAmmo();
   heat=0;overheated=false;updateHeat();dashCd=0;nadeCd=0;meleeCd=0;
   setTimeout(()=>{enemies.push(mkClone());cloneActive=true;Sim.target+=3000;Sim.next();},2000);
 }
@@ -2212,7 +2197,7 @@ function update(){
   updatePickups(dt);
 
   if(!waveActive&&enemies.length===0&&waveCd<=0){
-    if(wave<wCfg.length-1){waveActive=true;waveCd=2.5;hp=Math.min(100,hp+20);updateHp();startWave(wave+1);}
+    if(wave<wCfg.length-1){waveActive=true;waveCd=2.5;hp=100;updateHp();startWave(wave+1);}
     else if(wave===wCfg.length-1&&!cloneActive){waveActive=true;compA();Sim.buildPlayerModel();if(!Sim.running)Sim.start();showCloneWarn();}
   }
   if(waveCd>0)waveCd-=dt;
