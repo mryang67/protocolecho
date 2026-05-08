@@ -3,106 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>ECHO PROTOCOL v3</title>
+<title>ECHO PROTOCOL v7</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace}
 #C{width:100%;height:100%;display:block;position:fixed;top:0;left:0}
 #hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;display:none}
-#cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px}
+#cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px}
 #cross::before,#cross::after{content:'';position:absolute;background:rgba(0,255,200,0.8)}
-#cross::before{width:1.5px;height:100%;left:50%;transform:translateX(-50%)}
-#cross::after{width:100%;height:1.5px;top:50%;transform:translateY(-50%)}
-#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:3px;background:rgba(0,255,200,0.9);border-radius:50%}
-#hpBar{position:absolute;bottom:95px;left:16px;width:160px;height:8px;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,200,0.25);border-radius:2px}
-#hpFill{height:100%;background:linear-gradient(90deg,#ff0044,#ff4400,#00ff88);width:100%;transition:width 0.15s;border-radius:1px}
-#hpText{position:absolute;bottom:106px;left:16px;color:#00ffc8;font-size:9px;letter-spacing:1px;text-shadow:0 0 4px rgba(0,255,200,0.3)}
-#ammoD{position:absolute;bottom:95px;right:16px;color:#00ffc8;font-size:18px;text-align:right;text-shadow:0 0 6px rgba(0,255,200,0.3)}
-#ammoL{font-size:8px;color:rgba(0,255,200,0.4);letter-spacing:1px}
-/* Heat bar */
-#heatBar{position:absolute;bottom:82px;right:16px;width:100px;height:4px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,100,0,0.2);border-radius:1px}
+#cross::before{width:2px;height:100%;left:50%;transform:translateX(-50%)}
+#cross::after{width:100%;height:2px;top:50%;transform:translateY(-50%)}
+#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:5px;height:5px;background:#00ffc8;border-radius:50%}
+#hpBar{position:absolute;bottom:18px;left:16px;width:200px;height:16px;background:rgba(0,0,0,0.6);border:1px solid rgba(0,255,200,0.3);border-radius:3px}
+#hpFill{height:100%;background:linear-gradient(90deg,#ff0044,#ff4400,#00ff88);width:100%;transition:width 0.15s;border-radius:2px}
+#hpText{position:absolute;bottom:38px;left:16px;color:#00ffc8;font-size:16px;font-weight:bold}
+#ammoD{position:absolute;bottom:170px;right:18px;color:#00ffc8;font-size:32px;text-align:right}
+#ammoL{font-size:12px;color:rgba(0,255,200,0.5)}
+#heatBar{position:absolute;bottom:160px;right:18px;width:110px;height:6px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,100,0,0.2);border-radius:2px}
 #heatFill{height:100%;width:0%;background:linear-gradient(90deg,#ff6600,#ff0044);transition:width 0.1s;border-radius:1px}
-#heatText{position:absolute;bottom:88px;right:16px;font-size:7px;color:rgba(255,100,0,0.5);letter-spacing:1px;display:none}
-/* Abilities */
-#abilities{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
-.ability{width:36px;height:36px;border:1px solid rgba(0,255,200,0.2);border-radius:4px;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;position:relative}
-.ability .cd{position:absolute;bottom:0;left:0;width:100%;height:0%;background:rgba(0,0,0,0.7);border-radius:0 0 3px 3px;transition:height 0.1s}
-.ability .icon{font-size:14px;color:rgba(0,255,200,0.7);z-index:1}
-.ability .key{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:7px;color:rgba(0,255,200,0.3)}
-#dashAb .icon{color:rgba(0,180,255,0.8)}
-#grenadeAb .icon{color:rgba(255,150,0,0.8)}
-#meleeAb .icon{color:rgba(255,50,100,0.8)}
-
-#waveInfo{position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#00ffc8;font-size:12px;text-align:center;letter-spacing:2px;text-shadow:0 0 6px rgba(0,255,200,0.3)}
-#killC{font-size:9px;color:rgba(0,255,200,0.4);margin-top:2px}
-#scoreD{position:absolute;top:14px;right:14px;color:#00ffc8;font-size:14px;text-shadow:0 0 6px rgba(0,255,200,0.3)}
-#minimap{position:absolute;top:14px;left:14px;width:80px;height:80px;background:rgba(0,0,0,0.45);border:1px solid rgba(0,255,200,0.15);border-radius:3px;overflow:hidden}
+#heatText{position:absolute;bottom:170px;right:18px;font-size:12px;color:#ff0044;display:none}
+#waveInfo{position:absolute;top:16px;left:50%;transform:translateX(-50%);color:#00ffc8;font-size:18px;text-align:center;letter-spacing:3px}
+#killC{font-size:13px;color:rgba(0,255,200,0.5);margin-top:3px}
+#scoreD{position:absolute;top:16px;right:16px;color:#00ffc8;font-size:22px}
+#minimap{position:absolute;top:16px;left:16px;width:90px;height:90px;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,200,0.2);border-radius:4px;overflow:hidden}
 #mmC{width:100%;height:100%}
-#simHud{position:absolute;bottom:145px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;opacity:0;transition:opacity 0.4s}
-#simCount{color:rgba(255,0,68,0.7);font-size:9px;letter-spacing:1px}
-#simBar{width:140px;height:3px;background:rgba(255,0,68,0.1);margin:3px auto;border-radius:2px}
-#simFill{height:100%;width:0%;background:linear-gradient(90deg,#ff0044,#ff6600,#00ffc8);transition:width 0.3s;border-radius:2px}
-#simPhase{color:rgba(0,255,200,0.5);font-size:8px;letter-spacing:1px}
-#cloneIQ{position:absolute;top:48px;left:50%;transform:translateX(-50%);text-align:center;opacity:0;transition:opacity 0.3s;pointer-events:none}
-#iqText{color:rgba(255,0,68,0.6);font-size:8px;letter-spacing:2px}
-#iqBar{width:100px;height:2px;background:rgba(255,0,68,0.08);margin:2px auto;border-radius:1px}
-#iqFill{height:100%;width:0%;background:#ff0044;transition:width 0.4s;border-radius:1px}
-#versText{font-size:7px;color:rgba(255,0,68,0.4);letter-spacing:1px}
-
+#simHud{position:absolute;bottom:45px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;opacity:0;transition:opacity 0.4s}
+#simCount{color:rgba(255,0,68,0.8);font-size:12px;letter-spacing:1px}
+#simBar{width:180px;height:5px;background:rgba(255,0,68,0.1);margin:4px auto;border-radius:3px}
+#simFill{height:100%;width:0%;background:linear-gradient(90deg,#ff0044,#ff6600,#00ffc8);transition:width 0.3s;border-radius:3px}
+#simPhase{color:rgba(0,255,200,0.6);font-size:11px}
+#cloneIQ{position:absolute;top:60px;left:50%;transform:translateX(-50%);text-align:center;opacity:0;transition:opacity 0.3s;pointer-events:none}
+#iqText{color:rgba(255,0,68,0.8);font-size:13px;letter-spacing:2px}
+#iqBar{width:130px;height:4px;background:rgba(255,0,68,0.08);margin:3px auto;border-radius:2px}
+#iqFill{height:100%;width:0%;background:#ff0044;transition:width 0.4s;border-radius:2px}
+#versText{font-size:10px;color:rgba(255,0,68,0.5)}
 #dmgOv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9;opacity:0;transition:opacity 0.1s}
 #vig{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.5));display:none}
 #scan{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:7;opacity:0.025;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,200,0.06) 2px,rgba(0,255,200,0.06) 4px);display:none}
 #dashOv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;opacity:0;transition:opacity 0.15s;background:radial-gradient(ellipse at center,rgba(0,180,255,0.08),transparent 60%)}
-
-#ctrls{position:fixed;bottom:0;left:0;width:100%;height:155px;pointer-events:auto;z-index:20;display:none}
-#mJoy{position:absolute;bottom:16px;left:22px;width:110px;height:110px;background:rgba(0,255,200,0.05);border:1.5px solid rgba(0,255,200,0.12);border-radius:50%}
-#mStk{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;background:rgba(0,255,200,0.2);border:1.5px solid rgba(0,255,200,0.35);border-radius:50%}
-#aim{position:absolute;top:0;left:0;width:100%;height:calc(100% - 155px);z-index:15;pointer-events:auto;display:none}
-#fireBtn{position:absolute;bottom:24px;right:24px;width:72px;height:72px;background:rgba(255,50,50,0.1);border:1.5px solid rgba(255,50,50,0.35);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(255,80,80,0.65);font-size:8px;letter-spacing:1px}
-#rldBtn{position:absolute;bottom:24px;right:110px;width:42px;height:42px;background:rgba(0,255,200,0.06);border:1px solid rgba(0,255,200,0.2);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(0,255,200,0.5);font-size:7px}
-#dashBtn{position:absolute;bottom:24px;right:165px;width:42px;height:42px;background:rgba(0,150,255,0.08);border:1px solid rgba(0,150,255,0.25);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(0,180,255,0.6);font-size:7px}
-#nadeBtn{position:absolute;bottom:75px;right:24px;width:42px;height:42px;background:rgba(255,150,0,0.08);border:1px solid rgba(255,150,0,0.25);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(255,150,0,0.6);font-size:7px}
-#meleeBtn{position:absolute;bottom:75px;right:78px;width:42px;height:42px;background:rgba(255,50,100,0.08);border:1px solid rgba(255,50,100,0.25);border-radius:50%;pointer-events:auto;display:flex;align-items:center;justify-content:center;color:rgba(255,50,100,0.6);font-size:7px}
-
+/* Joystick — left side */
+#mJoy{position:fixed;bottom:20px;left:20px;width:140px;height:140px;background:rgba(0,255,200,0.05);border:2px solid rgba(0,255,200,0.15);border-radius:50%;z-index:20;display:none}
+#mStk{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;background:rgba(0,255,200,0.2);border:2px solid rgba(0,255,200,0.4);border-radius:50%}
+/* Buttons — all stacked right side */
+#ctrls{position:fixed;bottom:12px;right:12px;z-index:20;display:none;pointer-events:auto}
+.btnRow{display:flex;gap:10px;justify-content:flex-end;margin-bottom:10px}
+#fireBtn{width:96px;height:96px;background:rgba(255,50,50,0.12);border:2px solid rgba(255,50,50,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.8);font-size:14px;letter-spacing:2px}
+#rldBtn{width:62px;height:62px;background:rgba(0,255,200,0.08);border:2px solid rgba(0,255,200,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(0,255,200,0.7);font-size:12px}
+#dashBtn{width:62px;height:62px;background:rgba(0,150,255,0.1);border:2px solid rgba(0,150,255,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(0,180,255,0.8);font-size:12px}
+#nadeBtn{width:62px;height:62px;background:rgba(255,150,0,0.1);border:2px solid rgba(255,150,0,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,150,0,0.8);font-size:12px}
+#aim{position:fixed;top:0;left:0;width:100%;height:calc(100% - 100px);z-index:15;pointer-events:auto;display:none}
 .screen{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000}
 #titleScr{background:radial-gradient(ellipse at 20% 30%,#0a1218,#000 70%)}
-.title{font-size:clamp(30px,7vw,50px);color:#00ffc8;letter-spacing:12px;text-shadow:0 0 40px rgba(0,255,200,0.35),0 0 80px rgba(0,255,200,0.12);margin-bottom:2px}
-.sub{font-size:clamp(9px,2vw,12px);color:rgba(0,255,200,0.35);letter-spacing:8px;margin-bottom:30px}
-.desc{color:rgba(0,255,200,0.2);font-size:8px;margin-bottom:22px;text-align:center;padding:0 28px;line-height:1.8;letter-spacing:1px;max-width:340px}
-.btn{padding:12px 34px;background:transparent;border:1px solid rgba(0,255,200,0.35);color:#00ffc8;font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;cursor:pointer;pointer-events:auto;transition:all 0.3s;margin:4px}
-.btn:active{background:rgba(0,255,200,0.1);box-shadow:0 0 16px rgba(0,255,200,0.15)}
+.title{font-size:clamp(36px,9vw,60px);color:#00ffc8;letter-spacing:12px;text-shadow:0 0 40px rgba(0,255,200,0.35)}
+.sub{font-size:clamp(11px,2.5vw,15px);color:rgba(0,255,200,0.35);letter-spacing:8px;margin-bottom:24px}
+.desc{color:rgba(0,255,200,0.22);font-size:12px;margin-bottom:20px;text-align:center;padding:0 24px;line-height:1.8;max-width:380px}
+.btn{padding:16px 44px;background:transparent;border:1.5px solid rgba(0,255,200,0.35);color:#00ffc8;font-family:'Courier New',monospace;font-size:16px;letter-spacing:3px;cursor:pointer;pointer-events:auto;margin:6px}
+.btn:active{background:rgba(0,255,200,0.1)}
 .btn-r{border-color:rgba(255,0,68,0.35);color:#ff0044}
-.btn-r:active{background:rgba(255,0,68,0.1)}
-
-#waveAnn{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;color:#00ffc8;font-size:clamp(20px,4.5vw,36px);letter-spacing:5px;text-shadow:0 0 20px rgba(0,255,200,0.35);opacity:0;pointer-events:none;transition:opacity 0.5s;text-align:center}
+#waveAnn{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;color:#00ffc8;font-size:clamp(24px,5vw,40px);letter-spacing:5px;text-shadow:0 0 20px rgba(0,255,200,0.35);opacity:0;pointer-events:none;transition:opacity 0.5s;text-align:center}
 #cloneWarn{position:fixed;top:36%;left:50%;transform:translate(-50%,-50%);z-index:50;text-align:center;opacity:0;pointer-events:none;transition:opacity 0.7s}
-#cloneWarn h2{color:#ff0044;font-size:clamp(16px,3.5vw,28px);letter-spacing:5px;text-shadow:0 0 16px rgba(255,0,68,0.35);margin-bottom:6px}
-#cloneWarn p{color:rgba(255,0,68,0.5);font-size:10px;letter-spacing:2px;line-height:1.7}
-
-#analyticScr{display:none;overflow-y:auto;padding:14px;background:rgba(0,0,0,0.97)}
-#analyticScr h2{color:#00ffc8;font-size:15px;letter-spacing:4px;margin-bottom:14px;text-align:center}
-.sg{margin-bottom:10px;padding:8px 10px;background:rgba(0,255,200,0.015);border:1px solid rgba(0,255,200,0.06);border-radius:3px}
-.sg h3{color:rgba(0,255,200,0.55);font-size:9px;letter-spacing:2px;margin-bottom:5px}
-.sr{display:flex;justify-content:space-between;padding:1.5px 0;font-size:9px}
+#cloneWarn h2{color:#ff0044;font-size:clamp(20px,4vw,32px);letter-spacing:5px;margin-bottom:8px}
+#cloneWarn p{color:rgba(255,0,68,0.5);font-size:13px;letter-spacing:2px;line-height:1.7}
+#analyticScr{display:none;overflow-y:auto;padding:16px;background:rgba(0,0,0,0.97)}
+#analyticScr h2{color:#00ffc8;font-size:20px;letter-spacing:4px;margin-bottom:14px;text-align:center}
+.sg{margin-bottom:10px;padding:10px 12px;background:rgba(0,255,200,0.015);border:1px solid rgba(0,255,200,0.06);border-radius:4px}
+.sg h3{color:rgba(0,255,200,0.55);font-size:12px;letter-spacing:2px;margin-bottom:6px}
+.sr{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
 .sl{color:rgba(0,255,200,0.35)}
-.sv{color:#00ffc8}
-.sv.d{color:#ff0044}
-
+.sv{color:#00ffc8}.sv.d{color:#ff0044}
 #resultScr{display:none}
-#rTitle{color:#00ffc8;font-size:20px;letter-spacing:5px;margin-bottom:6px}
-#rSub{color:rgba(0,255,200,0.4);font-size:10px;margin-bottom:6px;text-align:center;padding:0 18px;line-height:1.5}
-#rStats{color:rgba(0,255,200,0.25);font-size:8px;margin-bottom:20px;text-align:center;line-height:1.7;white-space:pre-line}
-/* Training Visualization */
+#rTitle{color:#00ffc8;font-size:26px;letter-spacing:5px;margin-bottom:10px}
+#rSub{color:rgba(0,255,200,0.4);font-size:13px;margin-bottom:8px;text-align:center;padding:0 20px;line-height:1.5}
+#rStats{color:rgba(0,255,200,0.25);font-size:11px;margin-bottom:24px;text-align:center;line-height:1.7;white-space:pre-line}
 #trainPanel{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:110;background:#000;flex-direction:column;align-items:center;justify-content:center}
-#trainCanvas{border:1px solid rgba(0,255,200,0.12);border-radius:4px;background:#050510;max-width:95vw;max-height:60vh}
-#trainStats{color:rgba(0,255,200,0.5);font-size:8px;letter-spacing:1px;margin-top:10px;text-align:center;line-height:1.8}
+#trainCanvas{border:1px solid rgba(0,255,200,0.12);border-radius:4px;background:#050510;max-width:95vw;max-height:55vh}
+#trainStats{color:rgba(0,255,200,0.5);font-size:11px;margin-top:10px;text-align:center;line-height:2}
 #trainStats .val{color:#00ffc8}
 #trainStats .danger{color:#ff0044}
-#trainTitle{color:#00ffc8;font-size:14px;letter-spacing:4px;margin-bottom:10px;text-shadow:0 0 12px rgba(0,255,200,0.3)}
-#trainLegend{display:flex;gap:12px;margin-top:6px;justify-content:center;flex-wrap:wrap}
-.legend-item{display:flex;align-items:center;gap:4px;font-size:7px;color:rgba(0,255,200,0.4)}
-.legend-dot{width:6px;height:6px;border-radius:50%}
-#trainLog{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:rgba(255,0,68,0.5);font-size:8px;letter-spacing:1px;text-align:center;max-width:300px;line-height:1.5}
+#trainTitle{color:#00ffc8;font-size:18px;letter-spacing:4px;margin-bottom:10px}
+#trainLegend{display:flex;gap:16px;margin-top:8px;justify-content:center;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(0,255,200,0.4)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+#trainLog{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:rgba(255,0,68,0.5);font-size:11px;text-align:center;max-width:340px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -110,88 +92,61 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
   <div class="title">ECHO</div>
   <div class="sub">P R O T O C O L &nbsp; v 7</div>
   <div class="desc">
-    DASH. GRENADE. MELEE. EVERY TOOL TRACKED.<br>
-    YOUR ECHO HAS YOUR EXACT STATS AND ABILITIES.<br>
-    IT FIGHTS ITSELF ACROSS GENERATIONS.<br>
-    ONLY THE STRONGEST GENES SURVIVE.<br>
-    WATCH IT EVOLVE. THEN TRY TO SURVIVE.
+    DASH. GRENADE. EVERY TOOL TRACKED.<br>
+    YOUR ECHO FIGHTS ITSELF ACROSS GENERATIONS.<br>
+    ONLY THE STRONGEST GENES SURVIVE.
   </div>
   <button class="btn" onclick="startGame()">INITIATE</button>
-  <button class="btn btn-r" onclick="openTraining()" style="font-size:10px;padding:10px 28px">WATCH TRAINING (1x SPEED)</button>
+  <button class="btn btn-r" onclick="openTraining()">WATCH TRAINING</button>
 </div>
-
 <div id="trainPanel">
-  <div id="trainTitle">CLONE TRAINING — LIVE 1x SPEED</div>
+  <div id="trainTitle">CLONE TRAINING — LIVE</div>
   <canvas id="trainCanvas" width="380" height="380"></canvas>
   <div id="trainStats">
-    SIMS: <span class="val" id="trSims">0</span> &nbsp;|&nbsp;
-    GEN: <span class="val" id="trGen">0</span> &nbsp;|&nbsp;
-    IQ: <span class="danger" id="trIQ">0</span> &nbsp;|&nbsp;
-    VERS: <span class="danger" id="trVers">0</span>/20<br>
-    PHASE: <span class="val" id="trPhase">DORMANT</span> &nbsp;|&nbsp;
-    BEST: <span class="val" id="trBest">—</span> &nbsp;|&nbsp;
-    WIN RATE: <span class="danger" id="trWinRate">0%</span><br>
-    OPPONENT: <span class="danger" id="trOpponent">—</span> &nbsp;|&nbsp;
-    FIGHT: <span class="val" id="trFight">0</span> &nbsp;|&nbsp;
-    GvG: <span class="danger" id="trGvG">0</span><br>
-    DYNASTY: <span class="val" id="trDynasty">0</span> &nbsp;|&nbsp;
-    ELITE POOL: <span class="val" id="trElite">0</span> &nbsp;|&nbsp;
-    ARMS RACE: <span class="danger" id="trArms">—</span>
+    SIMS: <span class="val" id="trSims">0</span> | GEN: <span class="val" id="trGen">0</span> | IQ: <span class="danger" id="trIQ">0</span><br>
+    VERS: <span class="danger" id="trVers">0</span>/20 | WIN: <span class="danger" id="trWinRate">—</span> | GvG: <span class="danger" id="trGvG">0</span><br>
+    FIGHT <span class="val" id="trFight">0</span> vs <span class="danger" id="trOpponent">—</span><br>
+    DYNASTY: <span class="val" id="trDynasty">0</span> | <span class="val" id="trPhase">DORMANT</span> | BEST: <span class="val" id="trBest">—</span> | ELITE: <span class="val" id="trElite">0</span> | <span class="danger" id="trArms">—</span>
   </div>
   <div id="trainLegend">
     <div class="legend-item"><div class="legend-dot" style="background:#00ffc8"></div>CLONE</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff0044"></div>OPPONENT</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff660088"></div>GRENADE</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffffff22"></div>COVER</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff0044"></div>ENEMY</div>
     <div class="legend-item"><div class="legend-dot" style="background:#aa00ff"></div>SELF-PLAY</div>
   </div>
   <div id="trainLog"></div>
-  <button class="btn" onclick="closeTraining()" style="margin-top:12px;pointer-events:auto;font-size:10px">BACK</button>
+  <button class="btn" onclick="closeTraining()" style="margin-top:12px;pointer-events:auto">BACK</button>
 </div>
-
 <div id="hud">
   <div id="cross"><div class="dot"></div></div>
   <div id="hpText">SHIELD 100</div>
   <div id="hpBar"><div id="hpFill"></div></div>
-  <div id="ammoD"><div id="ammoL">ROUNDS</div><span id="ammoC">30</span><span style="font-size:11px;opacity:0.4"> / 30</span></div>
+  <div id="ammoD"><div id="ammoL">ROUNDS</div><span id="ammoC">30</span><span style="font-size:16px;opacity:0.4"> /30</span></div>
   <div id="heatBar"><div id="heatFill"></div></div>
   <div id="heatText">OVERHEAT</div>
-  <div id="abilities">
-    <div class="ability" id="dashAb"><div class="cd" id="dashCd"></div><div class="icon">⚡</div><div class="key">DASH</div></div>
-    <div class="ability" id="grenadeAb"><div class="cd" id="nadeCd"></div><div class="icon">💥</div><div class="key">NADE</div></div>
-    <div class="ability" id="meleeAb"><div class="cd" id="meleeCd"></div><div class="icon">⚔</div><div class="key">MELEE</div></div>
-  </div>
   <div id="waveInfo"><span id="waveT">WAVE 1</span><div id="killC">0 ELIMINATED</div></div>
   <div id="scoreD">0</div>
-  <div id="minimap"><canvas id="mmC" width="80" height="80"></canvas></div>
+  <div id="minimap"><canvas id="mmC" width="90" height="90"></canvas></div>
   <div id="simHud"><div id="simCount">SIMS: 0</div><div id="simBar"><div id="simFill"></div></div><div id="simPhase">DORMANT</div></div>
   <div id="cloneIQ"><div id="iqText">CLONE IQ: 0</div><div id="iqBar"><div id="iqFill"></div></div><div id="versText">VERSATILITY: 0/20</div></div>
 </div>
-
 <div id="dmgOv"></div><div id="dashOv"></div><div id="vig"></div><div id="scan"></div>
 <div id="waveAnn"></div>
 <div id="cloneWarn"><h2>ECHO DEPLOYED</h2><p>SAME HP. SAME DAMAGE. SAME ABILITIES.<br>EVOLVED THROUGH SELF-PLAY ACROSS GENERATIONS<br>THE STRONGEST DYNASTY GENOME HUNTS YOU NOW.</p></div>
-
+<div id="mJoy"><div id="mStk"></div></div>
 <div id="ctrls">
-  <div id="mJoy"><div id="mStk"></div></div>
-  <div id="fireBtn">FIRE</div>
-  <div id="rldBtn">R</div>
-  <div id="dashBtn">DSH</div>
-  <div id="nadeBtn">NAD</div>
-  <div id="meleeBtn">MEL</div>
+  <div class="btnRow"><div id="nadeBtn">NAD</div><div id="dashBtn">DSH</div></div>
+  <div class="btnRow"><div id="rldBtn">RLD</div><div id="fireBtn">FIRE</div></div>
 </div>
 <div id="aim"></div>
-
 <div class="screen" id="analyticScr">
-  <h2>DEEP PATTERN ANALYSIS</h2>
-  <div id="analyticContent" style="width:100%;max-width:380px"></div>
-  <button class="btn btn-r" onclick="launchClone()" style="margin-top:12px;pointer-events:auto">DEPLOY ECHO</button>
+  <h2>PATTERN ANALYSIS</h2>
+  <div id="analyticContent" style="width:100%;max-width:420px"></div>
+  <button class="btn btn-r" onclick="launchClone()" style="margin-top:14px;pointer-events:auto">DEPLOY ECHO</button>
 </div>
 <div class="screen" id="resultScr">
   <div id="rTitle"></div><div id="rSub"></div><div id="rStats"></div>
   <button class="btn" onclick="location.reload()" style="pointer-events:auto">REPLAY</button>
 </div>
-
 <canvas id="C"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -206,6 +161,8 @@ R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=0.7;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x06060e);scene.fog=new THREE.FogExp2(0x06060e,0.012);
 const cam=new THREE.PerspectiveCamera(73,innerWidth/innerHeight,0.1,200);cam.position.set(0,1.7,0);
 const clock=new THREE.Clock();
+// Helper: position a Three.js object (position is read-only, can't Object.assign it)
+function mk(obj,x,y,z,props){obj.position.set(x,y,z);if(props)Object.keys(props).forEach(k=>{if(k!=='position')obj[k]=props[k];});return obj;}
 let GS='title',hp=100,ammo=30,MX=30,score=0,kills=0,wave=-1;
 let enemies=[],tParts=[],fObjs=[],pickups=[];
 let cloneActive=false,reloading=false,waveActive=false,waveCd=0;
@@ -217,8 +174,9 @@ let dashCd=0,dashActive=false,dashDir=new THREE.Vector3(),dashTimer=0; // dash
 const DASH_CD=3,DASH_DUR=0.15,DASH_SPD=35;
 let nadeCd=0,grenades=[]; // grenades
 const NADE_CD=5;
-let meleeCd=0; // melee
-const MELEE_CD=2,MELEE_RANGE=3.5,MELEE_DMG=60;
+let meleeCd=0; // dummy, melee removed
+
+
 let sprintActive=false;
 
 // ================================================================
@@ -247,11 +205,11 @@ holdPosT:0,repoC:0,lastDmgT:0,dmgTH:[],
 // NEW: ability usage tracking
 dashCount:0,dashTimestamps:[],dashDirections:[],
 grenadeCount:0,grenadePositions:[],grenadeTimestamps:[],
-meleeCount:0,meleeHits:0,meleeTimestamps:[],
+
 sprintTime:0,heatOverheatCount:0,
 dashWhenLowHp:0,dashWhenHighHp:0,
 grenadesAtGroups:0,grenadesAtSingles:0,
-meleeAfterDash:0,
+
 abilityComboPatterns:[],lastAbilityTime:0,lastAbilityType:'',
 // derived
 playstyle:'balanced',dodgePattern:'none',aimProfile:'avg',combatRhythm:0,
@@ -339,7 +297,7 @@ function recNade(pos,nearCount){
   if(now-A.lastAbilityTime<1.5)A.abilityComboPatterns.push(A.lastAbilityType+'>nade');
   A.lastAbilityTime=now;A.lastAbilityType='nade';
 }
-function recMelee(hit){
+function recMelee(hit){return;
   A.meleeCount++;A.meleeTimestamps.push(clock.elapsedTime);
   if(hit)A.meleeHits++;
   const now=clock.elapsedTime;
@@ -376,9 +334,9 @@ function compA(){
   }
   A.aggScore=A.advC/Math.max(A.advC+A.retC,1);A.openRatio=1-(A.coverScore/tt);
   // Playstyle with ability usage
-  const abilityRate=(A.dashCount+A.grenadeCount+A.meleeCount)/tt;
+  const abilityRate=(A.dashCount+A.grenadeCount)/tt;
   if(A.avgEngDist>22)A.playstyle='sniper';
-  else if(A.aggScore>0.65&&A.avgEngDist<10)A.playstyle=A.meleeCount>5?'brawler':'rusher';
+  else if(A.aggScore>0.65&&A.avgEngDist<10)A.playstyle='rusher';
   else if(A.aggScore<0.3)A.playstyle='defensive';
   else if(A.acc>55&&A.avgBurst<2.5)A.playstyle='precision';
   else if(abilityRate>0.3&&A.dashCount>3)A.playstyle='ability-user';
@@ -415,7 +373,7 @@ function compA(){
   if(A.holdPosT>tt*0.4)A.weaknesses.push('stationary');
   if(A.dashCount<2&&tt>30)A.weaknesses.push('no-dash-usage');
   if(A.grenadeCount<1&&tt>30)A.weaknesses.push('no-nade-usage');
-  if(A.meleeCount===0&&A.avgEngDist<10)A.weaknesses.push('ignores-melee');
+  
   if(A.heatOverheatCount>3)A.weaknesses.push('trigger-discipline');
   if(A.dashWhenLowHp<A.dashWhenHighHp*0.3&&A.dashCount>3)A.weaknesses.push('no-escape-dash');
   if(A.acc>50)A.strengths.push('accurate');
@@ -423,7 +381,7 @@ function compA(){
   if(A.avgReac<1.5)A.strengths.push('fast-reactions');
   if(A.mEntropy>4)A.strengths.push('unpredictable');
   if(A.dashCount>8)A.strengths.push('dash-master');
-  if(A.meleeAfterDash>2)A.strengths.push('combo-user');
+  
   if(A.coverScore>tt*0.3)A.strengths.push('tactical');
   if(A.grenadeCount>4&&A.grenadesAtGroups>A.grenadeCount*0.5)A.strengths.push('smart-nades');
   // Clusters
@@ -456,11 +414,9 @@ const ARCHETYPES = [
   // Hybrid sub-variants
   {name:'DashSniper', avgSpeed:2,dodge:'dash-dodge',accuracy:0.6,aggression:0.2,fireRate:1,range:25,cover:0.5,dashRate:0.4,nadeRate:0.1,meleeRate:0},
   {name:'NadeSpam',   avgSpeed:3,dodge:'alternating',accuracy:0.3,aggression:0.45,fireRate:2,range:14,cover:0.4,dashRate:0.1,nadeRate:0.5,meleeRate:0.05},
-  {name:'GhostMelee', avgSpeed:5.8,dodge:'erratic',accuracy:0.15,aggression:0.95,fireRate:1,range:3,cover:0,dashRate:0.5,nadeRate:0,meleeRate:0.7},
   {name:'Turtle',     avgSpeed:1,dodge:'minimal',accuracy:0.5,aggression:0.05,fireRate:1.5,range:22,cover:0.9,dashRate:0,nadeRate:0.3,meleeRate:0},
   {name:'ComboKing',  avgSpeed:4.5,dodge:'dash-dodge',accuracy:0.4,aggression:0.7,fireRate:3,range:8,cover:0.1,dashRate:0.4,nadeRate:0.2,meleeRate:0.4},
   {name:'Kiter',      avgSpeed:5,dodge:'circle-strafe',accuracy:0.45,aggression:0.2,fireRate:3,range:18,cover:0.2,dashRate:0.3,nadeRate:0.15,meleeRate:0},
-  {name:'Berserker',  avgSpeed:6,dodge:'erratic',accuracy:0.2,aggression:1.0,fireRate:5,range:4,cover:0,dashRate:0.5,nadeRate:0,meleeRate:0.8},
   {name:'Sentinel',   avgSpeed:1.5,dodge:'alternating',accuracy:0.55,aggression:0.15,fireRate:2,range:20,cover:0.85,dashRate:0.05,nadeRate:0.4,meleeRate:0},
   {name:'Assassin',   avgSpeed:5.5,dodge:'dash-dodge',accuracy:0.5,aggression:0.8,fireRate:2,range:6,cover:0.1,dashRate:0.45,nadeRate:0.1,meleeRate:0.5},
   {name:'Wildcard',   avgSpeed:3+Math.random()*3,dodge:['erratic','circle-strafe','dash-dodge','minimal'][Math.floor(Math.random()*4)],accuracy:0.15+Math.random()*0.5,aggression:Math.random(),fireRate:1+Math.random()*5,range:4+Math.random()*24,cover:Math.random()*0.8,dashRate:Math.random()*0.5,nadeRate:Math.random()*0.4,meleeRate:Math.random()*0.5},
@@ -535,12 +491,12 @@ const Sim={
       if(aDC<=0&&gA.dashDodge>0.3&&Math.random()<0.04){aDC=3;aP.x+=apx*(Math.random()-0.5)*gA.dashDodge*6;aP.z+=apz*(Math.random()-0.5)*gA.dashDodge*6;}
       if(aDC<=0&&gA.comboChain>0.3&&dist>3&&dist<9&&aMC<=0.5&&Math.random()<0.03){aDC=3;aP.x+=anx*5;aP.z+=anz*5;}
       if(aNC<=0&&dist<18&&dist>4&&Math.random()<gA.nadePressure*0.04){aNC=5;if(dist<6)bH-=30;}
-      if(aMC<=0&&dist<3.5&&Math.random()<0.3){aMC=2;bH-=60;}
+      // melee removed
       // B abilities
       if(bDC<=0&&gB.dashDodge>0.3&&Math.random()<0.04){bDC=3;bP.x+=bpx*(Math.random()-0.5)*gB.dashDodge*6;bP.z+=bpz*(Math.random()-0.5)*gB.dashDodge*6;}
       if(bDC<=0&&gB.comboChain>0.3&&dist>3&&dist<9&&bMC<=0.5&&Math.random()<0.03){bDC=3;bP.x+=bnx*5;bP.z+=bnz*5;}
       if(bNC<=0&&dist<18&&dist>4&&Math.random()<gB.nadePressure*0.04){bNC=5;if(dist<6)aH-=30;}
-      if(bMC<=0&&dist<3.5&&Math.random()<0.3){bMC=2;aH-=60;}
+      // melee removed
       // Shooting A
       if(aRL<=0&&aHt<100&&aA>0){aSC-=dt;if(aSC<=0&&dist<35){aSC=0.12+(1-gA.aimCorr)*0.3;aA--;aHt+=4;
         let h=0.2+gA.aimCorr*0.35;if(gA.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(bRL>0)h+=0.1;if(Math.random()<h)bH-=25;}}
@@ -598,7 +554,7 @@ const Sim={
       pDashCd-=dt;pNadeCd-=dt;pMeleeCd-=dt;pReloading-=dt;
       if(pDashCd<=0&&Math.random()<model.dashRate*dt){pPos.x+=pVel.x*3;pPos.z+=pVel.z*3;pDashCd=3;}
       if(pNadeCd<=0&&Math.random()<model.nadeRate*dt&&tCDi<15){cHp-=25;cScore-=10;pNadeCd=5;}
-      if(pMeleeCd<=0&&tCDi<3.5&&Math.random()<model.meleeRate*dt){cHp-=50;cScore-=20;pMeleeCd=2;}
+      // melee removed
 
       // Opponent ammo/reload tracking
       pAmmo--;if(pAmmo<=0){pReloading=1.3;pAmmo=30;}
@@ -656,7 +612,7 @@ const Sim={
         if(nd<6){pHp-=30;cScore+=15;}
       }
       // Clone Melee: same 60 damage
-      if(cMeleeCd<=0&&tPDi<3.5&&Math.random()<0.3){
+      if(false){
         cMeleeCd=2;pHp-=60;cScore+=30;
       }
 
@@ -709,6 +665,11 @@ const Sim={
     }
     if(this.bestGenome)pop.push({...this.bestGenome});
     pop.push({...this.genome});
+
+    // Pre-compute expected fights per genome for sim count
+    const _dynastyFights=Math.min(this.dynasty.length,4);
+    const _eliteFights=Math.min(this.elitePool.length,3);
+    const _selfPlayPerGenome=4+_dynastyFights+_eliteFights;
 
     const scores=pop.map(g=>{
       let total=0;
@@ -853,8 +814,7 @@ const Sim={
     }
 
     // Estimate total fights this batch
-    const selfPlayPerGenome=spFights+dynastyFights+eliteFights;
-    this.simCount+=POP*(5+3+ARCHETYPES.length+selfPlayPerGenome+1+2+1);
+    this.simCount+=POP*(5+3+ARCHETYPES.length+_selfPlayPerGenome+1+2+1);
     this.gen++;
     if(this.simCount>8000)this.phase='mastered';
     else if(this.simCount>4000)this.phase='advanced';
@@ -1082,17 +1042,14 @@ const TrainViz = {
     // Clone nade
     if(s.cloneNadeCd<=0&&tPDi<18&&tPDi>4&&Math.random()<0.3*dt){
       s.cloneNadeCd=5;s.nades.push({x:s.clonePos.x,z:s.clonePos.z,tx:s.oppPos.x,tz:s.oppPos.z,t:0.6});}
-    // Clone melee
-    if(s.cloneMeleeCd<=0&&tPDi<3.5&&Math.random()<2*dt){
-      s.cloneMeleeCd=2;s.oppHp-=60;s.hits.push({x:s.oppPos.x,z:s.oppPos.z,t:0.4,c:'#ff00aa'});}
-
+    // Clone melee removed
     // Opponent shoots back
     if(Math.random()<a.fireRate*a.accuracy*dt*0.5&&tPDi<30){
       s.cloneHp-=22;s.hits.push({x:s.clonePos.x,z:s.clonePos.z,t:0.3,c:'#ff4400'});
       s.bullets.push({x:s.oppPos.x,z:s.oppPos.z,tx:s.clonePos.x,tz:s.clonePos.z,t:0.15,isClone:false});
     }
     // Opponent melee
-    if(tPDi<3.5&&Math.random()<a.meleeRate*dt){s.cloneHp-=50;s.hits.push({x:s.clonePos.x,z:s.clonePos.z,t:0.4,c:'#ff0044'});}
+    if(false){s.cloneHp-=50;s.hits.push({x:s.clonePos.x,z:s.clonePos.z,t:0.4,c:'#ff0044'});}
 
     // Update effects
     s.bullets=s.bullets.filter(b=>{b.t-=dt;return b.t>0;});
@@ -1240,8 +1197,8 @@ function buildEnv(){
   dl.shadow.camera.left=dl.shadow.camera.bottom=-40;dl.shadow.camera.right=dl.shadow.camera.top=40;scene.add(dl);
   const nC=[0x00ffc8,0xff0044,0x3300ff,0xff6600,0x00aaff,0xff00aa];
   [[-15,2.5,-15],[15,2.5,15],[-15,2.5,15],[15,2.5,-15],[0,3,0],[-25,2.5,25]].forEach((p,i)=>{
-    scene.add(Object.assign(new THREE.PointLight(nC[i%6],1.6,16),{position:new THREE.Vector3(...p)}));
-    scene.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),new THREE.MeshBasicMaterial({color:nC[i%6]})),{position:new THREE.Vector3(...p)}));
+    scene.add(mk(new THREE.PointLight(nC[i%6],1.6,16),...p));
+    scene.add(mk(new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),new THREE.MeshBasicMaterial({color:nC[i%6]})),...p));
   });
   for(let i=0;i<35;i++){
     const s=0.05+Math.random()*0.08;
@@ -1254,10 +1211,10 @@ function buildEnv(){
 function createWeapon(){
   weaponG=new THREE.Group();
   const gm=new THREE.MeshStandardMaterial({color:0x282838,metalness:0.9,roughness:0.12});
-  weaponG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.032,0.032,0.36),gm),{position:new THREE.Vector3(0.21,-0.16,-0.35)}));
-  weaponG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.05,0.07,0.18),gm),{position:new THREE.Vector3(0.21,-0.18,-0.17)}));
-  weaponG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.032,0.08,0.032),new THREE.MeshStandardMaterial({color:0x181828,metalness:0.5,roughness:0.6})),{position:new THREE.Vector3(0.21,-0.26,-0.11)}));
-  weaponG.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.006,6,6),new THREE.MeshBasicMaterial({color:0x00ffc8})),{position:new THREE.Vector3(0.21,-0.13,-0.45)}));
+  weaponG.add(mk(new THREE.Mesh(new THREE.BoxGeometry(0.032,0.032,0.36),gm),0.21,-0.16,-0.35));
+  weaponG.add(mk(new THREE.Mesh(new THREE.BoxGeometry(0.05,0.07,0.18),gm),0.21,-0.18,-0.17));
+  weaponG.add(mk(new THREE.Mesh(new THREE.BoxGeometry(0.032,0.08,0.032),new THREE.MeshStandardMaterial({color:0x181828,metalness:0.5,roughness:0.6})),0.21,-0.26,-0.11));
+  weaponG.add(mk(new THREE.Mesh(new THREE.SphereGeometry(0.006,6,6),new THREE.MeshBasicMaterial({color:0x00ffc8})),0.21,-0.13,-0.45));
   cam.add(weaponG);scene.add(cam);
 }
 
@@ -1269,12 +1226,12 @@ function mkEnemy(x,z,type='grunt'){
   const cols={grunt:0xff4400,heavy:0xaa0044,fast:0xff8800,clone:0x00ffc8};
   const c=cols[type]||0xff4400;
   const bM=new THREE.MeshStandardMaterial({color:c,roughness:0.4,metalness:0.6,emissive:c,emissiveIntensity:0.1});
-  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.36,1.3,8),bM),{position:new THREE.Vector3(0,0.85,0),castShadow:true}));
-  g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.22,8,8),new THREE.MeshStandardMaterial({color:0xddbbaa,roughness:0.5,metalness:0.3})),{position:new THREE.Vector3(0,1.78,0),castShadow:true}));
+  const body=mk(new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.36,1.3,8),bM),0,0.85,0);body.castShadow=true;g.add(body);
+  const head=mk(new THREE.Mesh(new THREE.SphereGeometry(0.22,8,8),new THREE.MeshStandardMaterial({color:0xddbbaa,roughness:0.5,metalness:0.3})),0,1.78,0);head.castShadow=true;g.add(head);
   const eM=new THREE.MeshBasicMaterial({color:type==='clone'?0x00ffc8:0xff0000});
-  [-0.06,0.06].forEach(ox=>g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6),eM),{position:new THREE.Vector3(ox,1.83,0.18)})));
-  [-0.4,0.4].forEach(ox=>g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.14,6,6),bM),{position:new THREE.Vector3(ox,1.38,0)})));
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.3),new THREE.MeshStandardMaterial({color:0x333,metalness:0.8,roughness:0.2})),{position:new THREE.Vector3(0.45,0.93,0.4)}));
+  [-0.06,0.06].forEach(ox=>g.add(mk(new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6),eM),ox,1.83,0.18)));
+  [-0.4,0.4].forEach(ox=>g.add(mk(new THREE.Mesh(new THREE.SphereGeometry(0.14,6,6),bM),ox,1.38,0)));
+  g.add(mk(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.3),new THREE.MeshStandardMaterial({color:0x333,metalness:0.8,roughness:0.2})),0.45,0.93,0.4));
   g.position.set(x,0,z);scene.add(g);
   const st={grunt:{hp:50,spd:3,dmg:7,si:1.6},heavy:{hp:100,spd:1.6,dmg:13,si:2.2},fast:{hp:30,spd:5.5,dmg:5,si:1},clone:{hp:160,spd:4,dmg:10,si:0.85}}[type]||{hp:50,spd:3,dmg:7,si:1.6};
   return{mesh:g,type,hp:st.hp,maxHp:st.hp,speed:st.spd,damage:st.dmg,shootInterval:st.si,lastShot:0,
@@ -1305,9 +1262,9 @@ function mkClone(){
   cl.cloneDashDur=DASH_DUR;cl.cloneDashSpd=DASH_SPD; // same
   cl.cloneNadeCd=0;cl.cloneNadeCD_MAX=NADE_CD; // 5s same
   cl.cloneNadeDmg=50; // same grenade base damage
-  cl.cloneMeleeCd=0;cl.cloneMeleeCD_MAX=MELEE_CD; // 2s same
-  cl.cloneMeleeDmg=MELEE_DMG; // 60 same
-  cl.cloneMeleeRange=MELEE_RANGE; // 3.5 same
+  
+  
+  
   cl.cloneAmmo=30;cl.cloneMaxAmmo=30; // same mag
   cl.cloneHeat=0;cl.cloneOverheated=false;
   cl.cloneReloading=false;cl.cloneReloadTimer=0;
@@ -1453,7 +1410,7 @@ function updateCloneAI(cl,dt,dist,toP){
   else cl.cloneHeat=Math.max(0,cl.cloneHeat-12*dt);
   cl.cloneDashCd=Math.max(0,cl.cloneDashCd-dt);
   cl.cloneNadeCd=Math.max(0,cl.cloneNadeCd-dt);
-  cl.cloneMeleeCd=Math.max(0,cl.cloneMeleeCd-dt);
+  
   cl.comboTimer=Math.max(0,cl.comboTimer-dt);
 
   // === SHOOTING (25 dmg — same as player body shot) ===
@@ -1503,7 +1460,7 @@ function updateCloneAI(cl,dt,dist,toP){
     if(doNade){cl.cloneNadeCd=cl.cloneNadeCD_MAX;nt.y=0;spawnGrenade(ep.clone().add(new THREE.Vector3(0,1.5,0)),nt,true);}
   }
   // === MELEE (identical: 2s cd, 60 dmg, 3.5 range) ===
-  if(cl.cloneMeleeCd<=0&&cl.adaptPhase>=1&&dist<cl.cloneMeleeRange){
+  if(false){
     let doMelee=false;
     if(cl.adaptPhase===1&&Math.random()<0.08)doMelee=true;
     if(cl.adaptPhase>=2)doMelee=true;
@@ -1583,27 +1540,7 @@ function spawnGrenade(from,target,isClone){
   grenades.push({mesh:m,vel,life:0.6,isClone,target});
 }
 
-function doMelee(){
-  if(meleeCd>0||GS!=='playing')return;
-  meleeCd=MELEE_CD;
-  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
-  let hit=false;
-  enemies.forEach(e=>{
-    if(e.hp<=0)return;
-    const d=e.mesh.position.distanceTo(cam.position);
-    if(d<MELEE_RANGE){
-      const toE=new THREE.Vector3().subVectors(e.mesh.position,cam.position).normalize();
-      if(toE.dot(fwd)>0.4){
-        e.hp-=MELEE_DMG;A.dmgD+=MELEE_DMG;hit=true;
-        spawnHitParts(e.mesh.position.clone().add(new THREE.Vector3(0,1.2,0)),0xff00aa);
-        if(e.hp<=0)killE(e);
-      }
-    }
-  });
-  recMelee(hit);
-  // Visual slash
-  spawnFlash(cam.position.clone().add(fwd.clone().multiplyScalar(1.5)).add(new THREE.Vector3(0,0.5,0)),0xff00aa);
-}
+function doMelee(){return;}
 
 function playerDmg(dmg,fromPos){
   hp=Math.max(0,hp-dmg);A.dmgT+=dmg;
@@ -1781,7 +1718,7 @@ function gameOver(won){
   GS='result';Sim.running=false;compA();
   document.getElementById('rTitle').textContent=won?'ECHO DEFEATED':'ECHO PREVAILS';
   document.getElementById('rSub').textContent=won?'You defied the machine. Your echo could not contain you.':'Your echo mastered every angle. It knew you better than yourself.';
-  document.getElementById('rStats').textContent=`Score: ${score} | Accuracy: ${A.acc.toFixed(1)}% | Style: ${A.playstyle.toUpperCase()}\nSims: ${Sim.simCount} | IQ: ${Sim.iq} | Versatility: ${Sim.versatility}/20\nGenome vs Genome: ${Sim.totalGvG} | Dynasty: ${Sim.dynasty.length} champions\nDashes: ${A.dashCount} | Grenades: ${A.grenadeCount} | Melee: ${A.meleeCount}\nWeaknesses: ${A.weaknesses.length} | Generations: ${Sim.gen}`;
+  document.getElementById('rStats').textContent=`Score: ${score} | Accuracy: ${A.acc.toFixed(1)}% | Style: ${A.playstyle.toUpperCase()}\nSims: ${Sim.simCount} | IQ: ${Sim.iq} | Versatility: ${Sim.versatility}/20\nGenome vs Genome: ${Sim.totalGvG} | Dynasty: ${Sim.dynasty.length} champions\nDashes: ${A.dashCount} | Grenades: ${A.grenadeCount}\nWeaknesses: ${A.weaknesses.length} | Generations: ${Sim.gen}`;
   document.getElementById('resultScr').style.display='flex';
 }
 
@@ -1809,9 +1746,8 @@ function initCtrls(){
   document.getElementById('rldBtn').addEventListener('touchstart',e=>{e.preventDefault();reload();});
   document.getElementById('dashBtn').addEventListener('touchstart',e=>{e.preventDefault();doDash();});
   document.getElementById('nadeBtn').addEventListener('touchstart',e=>{e.preventDefault();throwNade();});
-  document.getElementById('meleeBtn').addEventListener('touchstart',e=>{e.preventDefault();doMelee();});
   const keys={};
-  window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){e.preventDefault();playerShoot();}if(e.key==='r')reload();if(e.key==='q')doDash();if(e.key==='e')throwNade();if(e.key==='f')doMelee();});
+  window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){e.preventDefault();playerShoot();}if(e.key==='r')reload();if(e.key==='q')doDash();if(e.key==='e')throwNade();});
   window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
   window.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas){yaw-=e.movementX*0.002;pitch-=e.movementY*0.002;pitch=Math.max(-Math.PI/3,Math.min(Math.PI/3,pitch));}});
   canvas.addEventListener('click',()=>{if(GS==='playing')canvas.requestPointerLock();});
@@ -1830,21 +1766,17 @@ function updateHeat(){
   if(overheated)document.getElementById('heatFill').style.background='#ff0044';
   else document.getElementById('heatFill').style.background='linear-gradient(90deg,#ff6600,#ff0044)';
 }
-function updateCooldowns(){
-  document.getElementById('dashCd').style.height=(dashCd>0?Math.min(100,dashCd/DASH_CD*100):0)+'%';
-  document.getElementById('nadeCd').style.height=(nadeCd>0?Math.min(100,nadeCd/NADE_CD*100):0)+'%';
-  document.getElementById('meleeCd').style.height=(meleeCd>0?Math.min(100,meleeCd/MELEE_CD*100):0)+'%';
-}
+function updateCooldowns(){}
 const mmCtx=document.getElementById('mmC').getContext('2d');
 function updateMM(){
-  mmCtx.clearRect(0,0,80,80);mmCtx.fillStyle='rgba(0,0,0,0.3)';mmCtx.fillRect(0,0,80,80);
-  const px=40+(cam.position.x/40)*37,pz=40+(cam.position.z/40)*37;
+  mmCtx.clearRect(0,0,90,90);mmCtx.fillStyle='rgba(0,0,0,0.3)';mmCtx.fillRect(0,0,90,90);
+  const px=45+(cam.position.x/40)*42,pz=45+(cam.position.z/40)*42;
   mmCtx.fillStyle='#00ffc8';mmCtx.fillRect(px-1.5,pz-1.5,3,3);
   mmCtx.strokeStyle='#00ffc8';mmCtx.beginPath();mmCtx.moveTo(px,pz);
   mmCtx.lineTo(px+Math.sin(yaw)*6,pz-Math.cos(yaw)*6);mmCtx.stroke();
-  enemies.forEach(e=>{if(e.hp<=0)return;const ex=40+(e.mesh.position.x/40)*37,ez=40+(e.mesh.position.z/40)*37;
+  enemies.forEach(e=>{if(e.hp<=0)return;const ex=45+(e.mesh.position.x/40)*42,ez=45+(e.mesh.position.z/40)*42;
     mmCtx.fillStyle=e.type==='clone'?'#00ffc8':'#ff0044';mmCtx.fillRect(ex-1,ez-1,2.5,2.5);});
-  pickups.forEach(p=>{const px2=40+(p.mesh.position.x/40)*37,pz2=40+(p.mesh.position.z/40)*37;
+  pickups.forEach(p=>{const px2=45+(p.mesh.position.x/40)*42,pz2=45+(p.mesh.position.z/40)*42;
     mmCtx.fillStyle='#00ff88';mmCtx.fillRect(px2-1,pz2-1,2,2);});
 }
 
@@ -1879,7 +1811,7 @@ function update(){
     weaponG.position.y=Math.abs(Math.cos(wBob))*(isM?0.006:0.001)-wRecoil*0.04;weaponG.rotation.x=-wRecoil*0.1;}
 
   // Cooldowns
-  if(dashCd>0)dashCd-=dt;if(nadeCd>0)nadeCd-=dt;if(meleeCd>0)meleeCd-=dt;
+  if(dashCd>0)dashCd-=dt;if(nadeCd>0)nadeCd-=dt;
   // Heat decay
   if(!overheated)heat=Math.max(0,heat-12*dt);
   else{heat=Math.max(0,heat-20*dt);if(heat<=0){overheated=false;document.getElementById('heatText').style.display='none';}}
@@ -1901,7 +1833,7 @@ function update(){
 
 function startGame(){
   document.getElementById('titleScr').style.display='none';
-  ['hud','ctrls','aim','vig','scan'].forEach(id=>document.getElementById(id).style.display='block');
+  ['hud','ctrls','mJoy','aim','vig','scan'].forEach(id=>document.getElementById(id).style.display='block');
   GS='playing';A.startTime=clock.elapsedTime;lastP.copy(cam.position);
   buildEnv();createWeapon();initCtrls();MapK.init();waveActive=true;startWave(0);clock.getDelta();update();
 }
