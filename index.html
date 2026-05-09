@@ -108,6 +108,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
   </div>
   <button class="btn" onclick="startGame()">INITIATE</button>
   <button class="btn btn-r" onclick="openTraining()">WATCH TRAINING</button>
+  <button class="btn" onclick="startEndlessFromTitle()" style="border-color:rgba(255,150,0,0.4);color:#ff9900">ENDLESS MODE</button>
   <div style="margin-top:16px;text-align:center">
     <label style="color:rgba(0,255,200,0.4);font-size:11px;letter-spacing:1px">SENSITIVITY</label><br>
     <input type="range" id="sensSlider" min="1" max="10" value="4" style="width:180px;margin-top:6px;accent-color:#00ffc8" oninput="setSens(this.value)">
@@ -149,6 +150,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
   </div>
   <div id="minimap"><canvas id="mmC" width="90" height="90"></canvas></div>
   <div id="simHud"><div id="simCount">SIMS: 0</div><div id="simBar"><div id="simFill"></div></div><div id="simPhase">DORMANT</div></div>
+  <div id="endlessHud" style="position:absolute;top:44px;left:50%;transform:translateX(-50%);text-align:center;display:none;pointer-events:none">
+    <div style="color:#ff9900;font-size:16px;letter-spacing:2px" id="endlessWave">ECHO 1</div>
+    <div style="color:rgba(255,150,0,0.5);font-size:11px" id="endlessKills">0 ECHOES DESTROYED</div>
+  </div>
   <div id="cloneIQ"><div id="iqText">CLONE IQ: 0</div><div id="iqBar"><div id="iqFill"></div></div><div id="versText">VERSATILITY: 0/20</div></div>
 </div>
 <div id="dmgOv"></div><div id="dashOv"></div><div id="vig"></div><div id="scan"></div>
@@ -168,6 +173,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 <div class="screen" id="resultScr">
   <div id="rTitle"></div><div id="rSub"></div><div id="rStats"></div>
   <button class="btn" onclick="location.reload()" style="pointer-events:auto">REPLAY</button>
+  <button class="btn btn-r" id="retryBtn" onclick="retryClone()" style="pointer-events:auto;display:none">FIGHT AGAIN</button>
+  <button class="btn" id="endlessBtn" onclick="startEndless()" style="pointer-events:auto;border-color:rgba(255,150,0,0.4);color:#ff9900">ENDLESS MODE</button>
 </div>
 <canvas id="C"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -205,6 +212,7 @@ function showHitMarker(headshot){
 }
 // Screen shake
 let shakeX=0,shakeY=0,shakePower=0;
+let lastPlayerShotTime=0,lastPlayerAimDir={x:0,z:-1},lastCloneHitTime=0;
 function screenShake(power){shakePower=Math.max(shakePower,power);}
 // Kill feed notification
 function showKillNotif(type,headshot){
@@ -244,7 +252,7 @@ aimCorrAfterMiss:[],aimTrackSmooth:0,
 aimHeatmap:{},
 shotsFired:0,shotsHit:0,acc:0,heads:0,bodyH:0,hsRate:0,
 shotT:[],burstL:[],avgBurst:0,tBetweenBursts:[],avgTBS:0,
-frUnderP:0,frRelax:0,reloadT:[],panicRld:0,tacRld:0,
+frUnderP:0,frRelax:0,reloadT:[],panicRld:0,tacRld:0,reloadAmmoLeft:[],
 dmgD:0,dmgT:0,dps:0,
 engDist:[],avgEngDist:0,prefRange:'mid',
 killPos:[],engAngles:[],
@@ -451,6 +459,9 @@ function compA(){
   if(A.grenadeCount<1&&tt>30)A.weaknesses.push('no-nade-usage');
   
   if(A.heatOverheatCount>3)A.weaknesses.push('trigger-discipline');
+  if(A.panicRld>A.tacRld*2&&A.reloadT.length>3)A.weaknesses.push('panic-reloader');
+  if(A.reloadAmmoLeft.length>3){const avg=A.reloadAmmoLeft.reduce((s,v)=>s+v,0)/A.reloadAmmoLeft.length;if(avg>15)A.weaknesses.push('wastes-ammo-on-reload');}
+  if(A.reloadT.length<2&&tt>40)A.weaknesses.push('forgets-to-reload');
   if(A.dashWhenLowHp<A.dashWhenHighHp*0.3&&A.dashCount>3)A.weaknesses.push('no-escape-dash');
   if(A.acc>50)A.strengths.push('accurate');
   if(A.hsRate>20)A.strengths.push('headshot-hunter');
@@ -636,6 +647,9 @@ const Sim={
       targetSwitchRate:A.targetSwitches/Math.max(A.shotsFired,1),
       dashOffensiveRatio:A.dashesOffensive/Math.max(A.dashesOffensive+A.dashesDefensive,1),
       pressureAccuracy:A.shotsUnderMulti>0?A.accuracyUnderMulti/A.shotsUnderMulti:0.3,
+      reloadRate:A.reloadT.length/Math.max(tt,1),
+      panicReloadRatio:A.reloadT.length>0?A.panicRld/A.reloadT.length:0.5,
+      avgAmmoAtReload:A.reloadAmmoLeft.length>0?A.reloadAmmoLeft.reduce((s,v)=>s+v,0)/A.reloadAmmoLeft.length:0,
       waveAccuracies:Object.fromEntries(Object.entries(A.waveData).map(([k,v])=>[k,v.accuracy||0])),
     };
   },
@@ -1588,6 +1602,51 @@ function updateEnemyAI(e,dt){
     if(e.type==='rusher')ep.add(perp.clone().multiplyScalar(Math.sin(now*6)*e.speed*0.2*dt));
   }
 
+  // === IQ-BASED REACTIVE DODGE ===
+  const iqFactor=Math.min(1,cl.iq/400); // 0-1 scale based on IQ
+  const timeSinceShot=now-lastPlayerShotTime;
+
+  // 1. SHOT REACTION DODGE: jerk sideways when player fires at clone
+  if(timeSinceShot<0.15+0.3*(1-iqFactor)&&cl.adaptPhase>=0){
+    // Perpendicular to player's aim direction
+    const dodgeX=-lastPlayerAimDir.z;
+    const dodgeZ=lastPlayerAimDir.x;
+    // Alternate dodge direction unpredictably based on time
+    const dodgeDir=Math.sin(now*7.3+cl.iq*0.1)>0?1:-1;
+    const dodgeStrength=3*(0.3+iqFactor*0.7)*(1+cl.adaptPhase*0.15);
+    mx+=dodgeX*dodgeDir*dodgeStrength*dt*60;
+    mz+=dodgeZ*dodgeDir*dodgeStrength*dt*60;
+  }
+
+  // 2. AIM PREDICTION DODGE: read where player is currently looking and pre-dodge
+  if(cl.adaptPhase>=1){
+    const aimX=-Math.sin(yaw),aimZ=-Math.cos(yaw);
+    const toClone=new THREE.Vector3(ep.x-cam.position.x,0,ep.z-cam.position.z).normalize();
+    const aimDot=aimX*toClone.x+aimZ*toClone.z;
+    // If player is aiming within 30 degrees of clone, dodge harder
+    if(aimDot>0.85){
+      const urgency=(aimDot-0.85)*6.7; // 0-1
+      const dX=-aimZ,dZ=aimX; // perpendicular to aim
+      const dDir=Math.sin(now*5.1+cl.iq*0.07)>0?1:-1;
+      mx+=dX*dDir*urgency*iqFactor*(2+cl.adaptPhase)*dt*60;
+      mz+=dZ*dDir*urgency*iqFactor*(2+cl.adaptPhase)*dt*60;
+    }
+  }
+
+  // 3. VELOCITY JITTER: high IQ clones add random direction changes
+  if(cl.adaptPhase>=2){
+    const jitter=iqFactor*0.5*(1+cl.adaptPhase*0.2);
+    mx+=(Math.random()-0.5)*jitter*dt*60;
+    mz+=(Math.random()-0.5)*jitter*dt*60;
+  }
+
+  // 4. POST-HIT JUKE: after getting hit, change movement pattern
+  if(now-lastCloneHitTime<0.4&&cl.adaptPhase>=1){
+    // Reverse strafe direction and add burst of random movement
+    mx+=(Math.random()-0.5)*iqFactor*3*dt*60;
+    mz+=(Math.random()-0.5)*iqFactor*3*dt*60;
+  }
+
   ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);ep.y=0;
 
   // Billboard HP bar toward camera
@@ -1645,24 +1704,27 @@ function updateCloneAI(cl,dt,dist,toP){
   const nPx=toP.x,nPz=toP.z,pX=-nPz,pZ=nPx;
   let mx=0,mz=0;const t=clock.elapsedTime;
 
-  // === MOVEMENT — starts slow, ramps to player speed 6.5 ===
+  // === MOVEMENT — full speed from start, behavior evolves ===
+  cl.speed=6.5; // always match player
   if(cl.adaptPhase===0){
-    mx=nPx*0.3;mz=nPz*0.3;mx+=pX*Math.sin(t*0.7)*0.15;mz+=pZ*Math.sin(t*0.7)*0.15;
-    cl.speed=2.5;
+    mx=nPx*0.5;mz=nPz*0.5;
+    mx+=pX*Math.sin(t*2.0)*0.5;mz+=pZ*Math.sin(t*2.0)*0.5; // active strafe from start
+    mx+=pX*Math.cos(t*3.3)*0.25;mz+=pZ*Math.cos(t*3.3)*0.25; // dual freq
   }else if(cl.adaptPhase===1){
-    const dd=dist-g.engDist;mx=nPx*dd*0.08*g.approach;mz=nPz*dd*0.08*g.approach;
-    mx+=pX*Math.sin(t*g.strafeF)*g.strafeA*0.55;mz+=pZ*Math.sin(t*g.strafeF)*g.strafeA*0.55;
-    cl.speed=4.2;
+    const dd=dist-g.engDist;mx=nPx*dd*0.1*g.approach;mz=nPz*dd*0.1*g.approach;
+    mx+=pX*Math.sin(t*g.strafeF*1.5)*g.strafeA*0.9;mz+=pZ*Math.sin(t*g.strafeF*1.5)*g.strafeA*0.9;
+    mx+=pX*Math.cos(t*3.5)*0.3;mz+=pZ*Math.cos(t*3.5)*0.3; // secondary strafe
   }else if(cl.adaptPhase===2){
     const dd=dist-g.engDist;mx=nPx*dd*0.1*g.approach;mz=nPz*dd*0.1*g.approach;
-    mx+=pX*Math.sin(t*g.strafeF*1.4)*g.strafeA;mz+=pZ*Math.sin(t*g.strafeF*1.4)*g.strafeA;
+    mx+=pX*Math.sin(t*g.strafeF*1.5)*g.strafeA*1.2;mz+=pZ*Math.sin(t*g.strafeF*1.5)*g.strafeA*1.2;
+    mx+=pX*Math.sin(t*3.1)*0.3;mz+=pZ*Math.cos(t*2.7)*0.3; // double-frequency strafe
     if(cl.pDodge.includes('left')){mx+=pX*0.3;mz+=pZ*0.3;}
     else if(cl.pDodge.includes('right')){mx-=pX*0.3;mz-=pZ*0.3;}
-    cl.speed=5.5;
+
   }else if(cl.adaptPhase===3){
     const dd=dist-g.engDist;mx=nPx*dd*0.12*g.approach;mz=nPz*dd*0.12*g.approach;
-    mx+=pX*(Math.sin(t*g.strafeF*1.6)+Math.sin(t*2.7)*0.4)*g.strafeA;
-    mz+=pZ*(Math.sin(t*g.strafeF*1.6)+Math.sin(t*2.7)*0.4)*g.strafeA;
+    mx+=pX*(Math.sin(t*g.strafeF*1.8)+Math.sin(t*3.3)*0.5+Math.sin(t*5.7)*0.3)*g.strafeA;
+    mz+=pZ*(Math.cos(t*g.strafeF*1.8)+Math.cos(t*3.3)*0.5+Math.cos(t*5.7)*0.3)*g.strafeA;
     cl.weakTargets.forEach(w=>{
       if(w==='rear-blind'){mx+=(cam.position.x-nPx*10-ep.x)*0.025;mz+=(cam.position.z-nPz*10-ep.z)*0.025;}
       if(w==='static-target'||w==='stationary'){mx+=nPx*0.5;mz+=nPz*0.5;}
@@ -1671,7 +1733,7 @@ function updateCloneAI(cl,dt,dist,toP){
     });
     if(cl.pRange>18&&dist>10){mx+=nPx*0.6;mz+=nPz*0.6;}
     if(cl.pRange<7&&dist<12){mx-=nPx*0.3;mz-=nPz*0.3;}
-    cl.speed=6.5; // matches player
+
   }else if(cl.adaptPhase===4){
     const pdx=cl.predPos.x-ep.x,pdz=cl.predPos.z-ep.z,pdi=Math.sqrt(pdx*pdx+pdz*pdz)||1;
     mx=(pdx/pdi)*0.45+nPx*0.3;mz=(pdz/pdi)*0.45+nPz*0.3;
@@ -1685,7 +1747,6 @@ function updateCloneAI(cl,dt,dist,toP){
       if(w==='corner-camper'){mx+=(0-ep.x)*0.02;mz+=(0-ep.z)*0.02;}
     });
     if(cl.pClusters&&cl.pClusters.length>0){mx+=(cl.pClusters[0].x-ep.x)*0.015;mz+=(cl.pClusters[0].z-ep.z)*0.015;}
-    cl.speed=6.5;
   }else{
     const pdx=cl.predPos.x-ep.x,pdz=cl.predPos.z-ep.z,pdi=Math.sqrt(pdx*pdx+pdz*pdz)||1;
     mx=(pdx/pdi)*0.55+nPx*0.25;mz=(pdz/pdi)*0.55+nPz*0.25;
@@ -1701,9 +1762,16 @@ function updateCloneAI(cl,dt,dist,toP){
       if(w==='ignores-melee'&&dist<4){mx+=nPx*1.2;mz+=nPz*1.2;}
     });
     if(hp<20){mx+=nPx*2;mz+=nPz*2;}
-    cl.speed=6.5;
   }
   // === MAP KNOWLEDGE: use arena geometry at phase 3+ ===
+  // PUNISH RELOAD: rush the player when they're reloading
+  if(reloading&&cl.adaptPhase>=1&&g.punishReload>0.2){
+    mx+=nPx*g.punishReload*2.5;mz+=nPz*g.punishReload*2.5;
+  }
+  // PUNISH OVERHEAT: push when player overheated
+  if(overheated&&cl.adaptPhase>=2&&g.punishOverheat>0.2){
+    mx+=nPx*g.punishOverheat*2;mz+=nPz*g.punishOverheat*2;
+  }
   if(cl.adaptPhase>=3){
     // Seek flank cover for advantageous angle
     const fc=MapK.flankCover(ep.x,ep.z,cam.position.x,cam.position.z);
@@ -1737,6 +1805,7 @@ function updateCloneAI(cl,dt,dist,toP){
   ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);ep.y=0;
 
   // === AMMO + HEAT (identical to player mechanics) ===
+  // Clone HP regen at phase 3+ (slow, like a boss)
   if(cl.cloneReloading){cl.cloneReloadTimer-=dt;if(cl.cloneReloadTimer<=0){cl.cloneAmmo=cl.cloneMaxAmmo;cl.cloneReloading=false;}}
   if(cl.cloneOverheated){cl.cloneHeat=Math.max(0,cl.cloneHeat-20*dt);if(cl.cloneHeat<=0)cl.cloneOverheated=false;}
   else cl.cloneHeat=Math.max(0,cl.cloneHeat-12*dt);
@@ -1747,19 +1816,28 @@ function updateCloneAI(cl,dt,dist,toP){
 
   // === SHOOTING (25 dmg — same as player body shot) ===
   const canShoot=!cl.cloneReloading&&!cl.cloneOverheated&&cl.cloneAmmo>0;
-  const fireInt=[0.9,0.45,0.22,0.14,0.11,0.1][Math.min(cl.adaptPhase,5)];
+  const fireInt=[0.2,0.15,0.12,0.1,0.1,0.1][Math.min(cl.adaptPhase,5)];
   if(canShoot&&now-cl.lastShot>fireInt&&dist<40){
     cl.lastShot=now;cl.cloneAmmo--;cl.shotsFiredByClone++;
     cl.cloneHeat=Math.min(100,cl.cloneHeat+4);
     if(cl.cloneHeat>=100)cl.cloneOverheated=true;
-    const bAcc=[0.06,0.14,0.24,0.36,0.46,0.56][Math.min(cl.adaptPhase,5)];
+    const bAcc=[0.22,0.30,0.38,0.46,0.52,0.58][Math.min(cl.adaptPhase,5)];
     let hc=bAcc+cl.learnRate*0.1+Math.min(0.1,cl.consHits*0.02);
     hc*=Math.max(0.3,1-dist/45);
     if(cl.adaptPhase>=3)hc+=0.05;
+    if(reloading)hc+=0.12; // easy target while reloading
+    if(overheated)hc+=0.08; // can't shoot back
     if(cl.pPred>0.3&&cl.adaptPhase>=2)hc+=cl.pPred*0.1;
     hc+=cl.versatility*0.01;
     // Smart heat management at phase 3+
     if(cl.adaptPhase>=3&&cl.cloneHeat>75){/* skip shot to cool */}
+    // FULL AUTO BURST: spray when close or player is predictable
+    else if(cl.adaptPhase>=2&&(dist<8||cl.pPred>0.4)&&cl.cloneHeat<60){
+      // Full auto — double fire rate, slight accuracy penalty
+      if(Math.random()<hc*0.85){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;}
+      else{cl.consHits=0;cl.consMiss++;}
+      cl.lastShot=now-fireInt*0.5; // fire again sooner
+    }
     else if(Math.random()<hc){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;}
     else{cl.consHits=0;cl.consMiss++;}
     spawnFlash(ep.clone().add(new THREE.Vector3(0,1.1,0)).add(toP.clone().multiplyScalar(0.6)),cl.adaptPhase>=3?0x00ffc8:0x008866);
@@ -1769,11 +1847,23 @@ function updateCloneAI(cl,dt,dist,toP){
   else if(cl.adaptPhase>=2&&cl.cloneAmmo<8&&!cl.cloneReloading&&now-cl.lastShot>0.6){cl.cloneReloading=true;cl.cloneReloadTimer=1.3;}
 
   // === DASH (identical: 3s cd, same speed/dur) ===
-  if(cl.cloneDashCd<=0&&cl.adaptPhase>=1){
+  if(cl.cloneDashCd<=0&&cl.adaptPhase>=0){
     let doDash=false,ddx=0,ddz=0;
-    if(cl.adaptPhase===1&&dist<6&&Math.random()<0.025){doDash=true;ddx=pX*(Math.random()-0.5)*2;ddz=pZ*(Math.random()-0.5)*2;}
-    if(cl.adaptPhase>=2&&now-A.lastDmgT<0.3&&Math.random()<0.35){doDash=true;ddx=-nPx+pX*(Math.random()-0.5);ddz=-nPz+pZ*(Math.random()-0.5);}
-    if(cl.adaptPhase>=3&&dist>3&&dist<8&&cl.cloneMeleeCd<=0.5&&Math.random()<0.04){doDash=true;ddx=nPx;ddz=nPz;cl.comboState='dash';cl.comboTimer=0.8;}
+    // REACTIVE DODGE DASH: when clone takes damage, dash sideways
+    if(cl.hp<cl.maxHp&&now-lastCloneHitTime<0.15&&Math.random()<0.3+iqFactor*0.3){
+      doDash=true;ddx=pX*(Math.random()>0.5?1:-1);ddz=pZ*(Math.random()>0.5?1:-1);
+    }
+    // AIM DODGE DASH: when player is aiming dead-on, dash to break tracking
+    const aimX2=-Math.sin(yaw),aimZ2=-Math.cos(yaw);
+    const toCl2=new THREE.Vector3(ep.x-cam.position.x,0,ep.z-cam.position.z).normalize();
+    const aimPrecision=aimX2*toCl2.x+aimZ2*toCl2.z;
+    if(aimPrecision>0.95&&cl.adaptPhase>=1&&Math.random()<0.03+iqFactor*0.04){
+      doDash=true;ddx=-aimZ2*(Math.random()>0.5?1:-1);ddz=aimX2*(Math.random()>0.5?1:-1);
+    }
+    // OFFENSIVE DASH: close distance for burst
+    if(cl.adaptPhase>=2&&dist>6&&dist<15&&Math.random()<0.03){doDash=true;ddx=nPx;ddz=nPz;cl.comboState='dash';cl.comboTimer=0.8;}
+    // FLANKING DASH: at high phase, dash to the side to reposition
+    if(cl.adaptPhase>=3&&Math.random()<0.02){doDash=true;ddx=pX*(Math.random()>0.5?1:-1);ddz=pZ*(Math.random()>0.5?1:-1);}
     if(cl.adaptPhase>=4&&Math.random()<0.03){doDash=true;
       if(cl.pDodge.includes('left')){ddx=pX;ddz=pZ;}else if(cl.pDodge.includes('right')){ddx=-pX;ddz=-pZ;}else{ddx=nPx;ddz=nPz;}}
     if(cl.adaptPhase>=5&&Math.random()<0.035){doDash=true;ddx=predVx*15+nPx*0.5;ddz=predVz*15+nPz*0.5;}
@@ -1783,10 +1873,11 @@ function updateCloneAI(cl,dt,dist,toP){
       spawnFlash(ep.clone().add(new THREE.Vector3(0,1,0)),0x00aaff);}
   }
   // === GRENADE (identical: 5s cd, same damage) ===
-  if(cl.cloneNadeCd<=0&&cl.adaptPhase>=2){
+  if(cl.cloneNadeCd<=0&&cl.adaptPhase>=1){
     let doNade=false;let nt=cam.position.clone();
-    if(cl.adaptPhase===2&&dist<18&&dist>5&&Math.random()<0.012){doNade=true;}
-    if(cl.adaptPhase>=3&&dist<20&&dist>4&&Math.random()<0.018){doNade=true;nt.x+=predVx*8;nt.z+=predVz*8;}
+    if(cl.adaptPhase===1&&dist<18&&dist>5&&Math.random()<0.015){doNade=true;}
+    if(cl.adaptPhase===2&&dist<18&&dist>4&&Math.random()<0.02){doNade=true;nt.x+=predVx*6;nt.z+=predVz*6;}
+    if(cl.adaptPhase>=3&&dist<22&&dist>3&&Math.random()<0.025){doNade=true;nt.x+=predVx*8;nt.z+=predVz*8;}
     if(cl.adaptPhase>=4&&cl.pClusters&&cl.pClusters.length>0&&Math.random()<0.01){doNade=true;const fv=cl.pClusters[Math.floor(Math.random()*Math.min(cl.pClusters.length,3))];nt.set(fv.x,0,fv.z);}
     if(cl.adaptPhase>=5&&Math.random()<0.022){doNade=true;nt.x=cam.position.x+predVx*15;nt.z=cam.position.z+predVz*15;}
     if(doNade){cl.cloneNadeCd=cl.cloneNadeCD_MAX;nt.y=0;spawnGrenade(ep.clone().add(new THREE.Vector3(0,1.5,0)),nt,true);}
@@ -1840,6 +1931,7 @@ function playerShoot(){
       if(rayY>=-0.2&&rayY<=2.4){
         const isH=rayY>1.8;
         const dmg=isH?55:25;e.hp-=dmg;hit=true;hs=isH;hd=projH;A.dmgD+=dmg;
+        if(e.type==='clone')lastCloneHitTime=clock.elapsedTime;
         showHitMarker(isH);
         // Target priority tracking
         if(e.id!==A.lastTargetId){A.targetSwitches++;A.lastTargetId=e.id;}
@@ -1862,6 +1954,9 @@ function playerShoot(){
     }
   });
   recShot(hit,hs,hd);
+  // Signal to clone: player fired
+  lastPlayerShotTime=clock.elapsedTime;
+  lastPlayerAimDir={x:-Math.sin(yaw),z:-Math.cos(yaw)};
   // Per-wave diagnostic tracking
   const wd=A.waveData[A.currentWave];
   if(wd){wd.shotsF++;if(hit)wd.shotsH++;}
@@ -1926,25 +2021,36 @@ function playerDmg(dmg,fromPos){
 function killE(e){
   kills++;
   const typeScores={charger:80,strafer:100,sniper:150,flanker:120,rusher:100,tank:200,clone:1500};
-  score+=(typeScores[e.type]||100);
+  score+=(typeScores[e.type]||100)+(endlessMode?endlessKills*500:0);
   A.killPos.push({x:cam.position.x,z:cam.position.z});
   A.typeKills[e.type]=(A.typeKills[e.type]||0)+1;
-  // Time-to-kill tracking
   const ttk=clock.elapsedTime-e.spawnTime;
   if(!A.ttkByType[e.type])A.ttkByType[e.type]=[];
   A.ttkByType[e.type].push(ttk);
-  // Per-wave kill tracking
   const wd=A.waveData[A.currentWave];
   if(wd){wd.kills++;wd.ttk.push(ttk);}
   document.getElementById('killC').textContent=`${kills} ELIMINATED`;
   document.getElementById('scoreD').textContent=score;
   spawnDeathP(e.mesh.position.clone());scene.remove(e.mesh);
+  if(e.type==='clone'&&endlessMode){
+    // Endless mode: respawn stronger clone
+    endlessKills++;
+    cloneActive=false;
+    hp=Math.min(100,hp+50);updateHp();
+    Sim.target=Sim.simCount+2000;Sim.running=true;Sim.next();
+    announce(`ECHO ${endlessKills} DESTROYED`);
+    document.getElementById('endlessKills').textContent=`${endlessKills} ECHOES DESTROYED`;
+    setTimeout(()=>spawnEndlessClone(),3000);
+    return;
+  }
   if(e.type!=='clone'&&Math.random()<0.4)spawnPickup(e.mesh.position.clone());
   if(e.type==='clone'){cloneActive=false;setTimeout(()=>gameOver(true),1200);}
 }
 
 function reload(){if(reloading||ammo===MX)return;reloading=true;A.reloadT.push(clock.elapsedTime);
   if(ammo===0)A.panicRld++;else A.tacRld++;
+  A.reloadAmmoLeft.push(ammo); // track how many bullets were left
+  const wd=A.waveData[A.currentWave];if(wd){wd.reloads=(wd.reloads||0)+1;if(ammo===0)wd.panicReloads=(wd.panicReloads||0)+1;}
   document.getElementById('ammoC').textContent='...';
   setTimeout(()=>{ammo=MX;reloading=false;updateAmmo();},1300);}
 
@@ -2073,6 +2179,7 @@ function showAnalytics(){
     <div class="sr"><span class="sl">Dodge Pattern</span><span class="sv d">${a.dodgePattern.toUpperCase()}</span></div>
     <div class="sr"><span class="sl">Aim Profile</span><span class="sv d">${a.aimProfile.toUpperCase()}</span></div>
     <div class="sr"><span class="sl">Preferred Range</span><span class="sv">${a.avgEngDist.toFixed(1)}m</span></div>
+    <div class="sr"><span class="sl">Reloads</span><span class="sv">${a.reloadT.length} (${a.panicRld} panic / ${a.tacRld} tactical)</span></div>
     </div>
     <div class="sg"><h3>WEAKNESSES FOUND: ${a.weaknesses.length}</h3>
     ${a.weaknesses.map(w=>`<div class="sr"><span class="sv d">⚠ ${w.toUpperCase()}</span></div>`).join('')}
@@ -2112,11 +2219,78 @@ function gameOver(won){
   document.getElementById('rSub').textContent=won?'You defied the machine. Your echo could not contain you.':'Your echo mastered every angle. It knew you better than yourself.';
   document.getElementById('rStats').textContent=`Score: ${score} | Accuracy: ${A.acc.toFixed(1)}% | Style: ${A.playstyle.toUpperCase()}\nSims: ${Sim.simCount} | IQ: ${Sim.iq} | Versatility: ${Sim.versatility}/20\nGenome vs Genome: ${Sim.totalGvG} | Dynasty: ${Sim.dynasty.length} champions\nDashes: ${A.dashCount} | Grenades: ${A.grenadeCount}\nWeaknesses: ${A.weaknesses.length} | Generations: ${Sim.gen}`;
   document.getElementById('resultScr').style.display='flex';
+  // Show retry button if player lost
+  const rb=document.getElementById('retryBtn');
+  if(rb)rb.style.display=won?'none':'inline-block';
+}
+
+function retryClone(){
+  document.getElementById('resultScr').style.display='none';
+  // Clean up old clone from scene
+  enemies.forEach(e=>scene.remove(e.mesh));enemies=[];
+  cloneActive=false;
+  GS='playing';
+  announce('ECHO REMATCHES');document.getElementById('waveT').textContent='ECHO REMATCH';
+  hp=100;updateHp();ammo=MX;reloading=false;updateAmmo();
+  heat=0;overheated=false;updateHeat();dashCd=0;nadeCd=0;meleeCd=0;
+  ['hud','ctrls','mJoy','vig','scan'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='block';});
+  // Evolve clone further before rematch
+  Sim.target=Sim.simCount+3000;Sim.running=true;Sim.next();
+  setTimeout(()=>{enemies.push(mkClone());cloneActive=true;},2000);
 }
 
 // ================================================================
-// INPUT
+// ENDLESS MODE
 // ================================================================
+let endlessMode=false,endlessKills=0,endlessHpBonus=0;
+
+function startEndlessFromTitle(){
+  startGame();
+  setTimeout(()=>{
+    enemies.forEach(e=>scene.remove(e.mesh));enemies=[];
+    waveActive=false;wave=99;
+    Sim.playerModel={avgSpeed:4,dodge:'alternating',strafeRatio:1,accuracy:0.35,avgEngDist:12,reaction:1.8,
+      aggression:0.5,fireRate:3,burstLen:3,movePred:0.3,prefPos:[],weaknesses:['balanced'],coverUse:0.3,
+      aimProfile:'tracking',posClusters:[],dirChangeRate:2,dashRate:0.15,nadeRate:0.1,meleeRate:0.1,
+      dashBias:0.5,combos:[],meleeAfterDash:0,reloadRate:0.1,panicReloadRatio:0.5,avgAmmoAtReload:0};
+    MapK.init();Sim.running=true;Sim.start();
+    endlessMode=true;endlessKills=0;endlessHpBonus=0;
+    document.getElementById('endlessHud').style.display='block';
+    document.getElementById('waveT').textContent='ENDLESS';
+    document.getElementById('cloneIQ').style.opacity='1';
+    announce('ENDLESS MODE — SURVIVE');
+    setTimeout(()=>spawnEndlessClone(),2000);
+  },500);
+}
+
+function startEndless(){
+  document.getElementById('resultScr').style.display='none';
+  enemies.forEach(e=>scene.remove(e.mesh));enemies=[];
+  cloneActive=false;endlessMode=true;endlessKills=0;endlessHpBonus=0;
+  GS='playing';
+  hp=100;updateHp();ammo=MX;reloading=false;updateAmmo();
+  heat=0;overheated=false;updateHeat();dashCd=0;nadeCd=0;meleeCd=0;
+  ['hud','ctrls','mJoy','vig','scan'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='block';});
+  document.getElementById('endlessHud').style.display='block';
+  document.getElementById('waveT').textContent='ENDLESS';
+  document.getElementById('cloneIQ').style.opacity='1';
+  Sim.target=Sim.simCount+5000;Sim.running=true;Sim.next();
+  announce('ENDLESS MODE — SURVIVE');
+  setTimeout(()=>spawnEndlessClone(),2000);
+}
+
+function spawnEndlessClone(){
+  const cl=mkClone();
+  cl.hp=100;cl.maxHp=100; // always same as player
+  // Scale intelligence, not stats
+  cl.adaptPhase=Math.min(5,1+Math.floor(endlessKills/2)); // start at higher phase
+  cl.adaptTimer=cl.adaptPhase*3;
+  cl.iq=Math.min(500,Sim.iq+endlessKills*30); // boosted IQ for smarter dodging
+  cl.learnRate=Math.min(1,0.5+endlessKills*0.1); // faster phase transitions
+  enemies.push(cl);cloneActive=true;
+  document.getElementById('endlessWave').textContent=`ECHO ${endlessKills+1}`;
+  document.getElementById('endlessKills').textContent=`${endlessKills} ECHOES DESTROYED`;
+}
 let moveInput={x:0,y:0},aimTid=null,aimLX=0,aimLY=0,moveTid=null,shootI=null;
 let shootTid=null; // track shoot touch separately
 function initCtrls(){
