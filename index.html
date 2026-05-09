@@ -53,10 +53,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 #scan{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:7;opacity:0.025;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,200,0.06) 2px,rgba(0,255,200,0.06) 4px);display:none}
 #dashOv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;opacity:0;transition:opacity 0.15s;background:radial-gradient(ellipse at center,rgba(0,180,255,0.08),transparent 60%)}
 /* Joystick — left side */
-#mJoy{position:fixed;bottom:24px;left:50px;width:140px;height:140px;background:rgba(0,255,200,0.05);border:2px solid rgba(0,255,200,0.15);border-radius:50%;z-index:20;display:none}
+#mJoy{position:fixed;bottom:30px;left:80px;width:140px;height:140px;background:rgba(0,255,200,0.05);border:2px solid rgba(0,255,200,0.15);border-radius:50%;z-index:20;display:none}
 #mStk{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;background:rgba(0,255,200,0.2);border:2px solid rgba(0,255,200,0.4);border-radius:50%}
 /* Buttons — all stacked right side */
-#ctrls{position:fixed;bottom:14px;right:36px;z-index:20;display:none;pointer-events:auto}
+#ctrls{position:fixed;bottom:16px;right:60px;z-index:20;display:none;pointer-events:auto}
 .btnRow{display:flex;gap:10px;justify-content:flex-end;margin-bottom:10px}
 #fireBtn{width:110px;height:110px;background:rgba(255,50,50,0.12);border:2px solid rgba(255,50,50,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.8);font-size:16px;letter-spacing:2px}
 #rldBtn{width:62px;height:62px;background:rgba(0,255,200,0.08);border:2px solid rgba(0,255,200,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(0,255,200,0.7);font-size:12px}
@@ -2067,72 +2067,32 @@ function showAnalytics(){
   compA();const a=A,tt=a.tMove+a.tStill||1;
   const dp=a.posH.length+a.aimH.length+a.shotT.length+a.dmgTH.length+a.velH.length+a.dashTimestamps.length+a.grenadeTimestamps.length+a.meleeTimestamps.length;
   document.getElementById('analyticContent').innerHTML=`
-    <div class="sg"><h3>MOVEMENT — ${a.posH.length} SAMPLES</h3>
-    <div class="sr"><span class="sl">Distance</span><span class="sv">${a.dist.toFixed(1)}m</span></div>
-    <div class="sr"><span class="sl">Speed Avg/Max</span><span class="sv">${a.avgSpd.toFixed(2)}/${a.maxSpd.toFixed(2)}</span></div>
-    <div class="sr"><span class="sl">Moving</span><span class="sv">${(a.tMove/tt*100).toFixed(0)}%</span></div>
-    <div class="sr"><span class="sl">Dir Changes</span><span class="sv">${a.dirChg} (${a.mEntropy.toFixed(1)}/s)</span></div>
-    <div class="sr"><span class="sl">Strafe L/R</span><span class="sv">${a.sL}/${a.sR}</span></div>
-    <div class="sr"><span class="sl">Dodge</span><span class="sv d">${a.dodgePattern.toUpperCase()}</span></div>
-    <div class="sr"><span class="sl">Predictability</span><span class="sv d">${(a.movePred*100).toFixed(0)}%</span></div>
-    <div class="sr"><span class="sl">Cover Use</span><span class="sv">${(a.coverScore/tt*100).toFixed(0)}%</span></div>
+    <div class="sg"><h3>DATA POINTS: ${dp}</h3></div>
+    <div class="sg"><h3>PLAYSTYLE: ${a.playstyle.toUpperCase()}</h3>
+    <div class="sr"><span class="sl">Accuracy</span><span class="sv">${a.acc.toFixed(1)}% (${a.heads} headshots)</span></div>
+    <div class="sr"><span class="sl">Dodge Pattern</span><span class="sv d">${a.dodgePattern.toUpperCase()}</span></div>
+    <div class="sr"><span class="sl">Aim Profile</span><span class="sv d">${a.aimProfile.toUpperCase()}</span></div>
+    <div class="sr"><span class="sl">Preferred Range</span><span class="sv">${a.avgEngDist.toFixed(1)}m</span></div>
     </div>
-    <div class="sg"><h3>AIM — ${a.aimH.length} SAMPLES</h3>
-    <div class="sr"><span class="sl">Aim Stability</span><span class="sv">${a.aimStab.toFixed(0)}/100</span></div>
-    <div class="sr"><span class="sl">Tracking</span><span class="sv">${a.aimTrackSmooth.toFixed(0)}/100</span></div>
-    <div class="sr"><span class="sl">Flick Shots</span><span class="sv">${a.aimSnaps}</span></div>
-    <div class="sr"><span class="sl">Profile</span><span class="sv">${a.aimProfile.toUpperCase()}</span></div>
+    <div class="sg"><h3>WEAKNESSES FOUND: ${a.weaknesses.length}</h3>
+    ${a.weaknesses.map(w=>`<div class="sr"><span class="sv d">⚠ ${w.toUpperCase()}</span></div>`).join('')}
     </div>
-    <div class="sg"><h3>COMBAT — ${a.shotsFired} SHOTS</h3>
-    <div class="sr"><span class="sl">Accuracy</span><span class="sv">${a.acc.toFixed(1)}%</span></div>
-    <div class="sr"><span class="sl">Headshot Rate</span><span class="sv">${a.hsRate.toFixed(1)}%</span></div>
-    <div class="sr"><span class="sl">Burst Avg</span><span class="sv">${a.avgBurst.toFixed(1)}</span></div>
-    <div class="sr"><span class="sl">DPS</span><span class="sv">${a.dps.toFixed(1)}</span></div>
-    <div class="sr"><span class="sl">Dmg Dealt/Taken</span><span class="sv">${a.dmgD}/${a.dmgT}</span></div>
-    <div class="sr"><span class="sl">Overheats</span><span class="sv">${a.heatOverheatCount}</span></div>
-    </div>
-    <div class="sg"><h3>ABILITIES</h3>
-    <div class="sr"><span class="sl">Dashes</span><span class="sv">${a.dashCount} (${a.dashesOffensive||0} offensive / ${a.dashesDefensive||0} defensive)</span></div>
-    <div class="sr"><span class="sl">Grenades</span><span class="sv">${a.grenadeCount} (${a.grenadesAtGroups} at groups)</span></div>
-    <div class="sr"><span class="sl">Combos</span><span class="sv">${a.abilityComboPatterns.length}</span></div>
-    </div>
-    <div class="sg"><h3>DIAGNOSTIC RESULTS PER SCAN</h3>
+    <div class="sg"><h3>SCAN RESULTS</h3>
     ${Object.entries(a.waveData).map(([wn,wd])=>`
-    <div class="sr"><span class="sl">Scan ${parseInt(wn)+1}</span><span class="sv">${wd.accuracy?wd.accuracy.toFixed(0):'?'}% acc | ${wd.kills} kills | ${wd.dmgTaken} dmg taken | ${wd.dashUsed}D ${wd.nadeUsed}G${wd.avgTTK?' | TTK '+wd.avgTTK.toFixed(1)+'s':''}</span></div>
+    <div class="sr"><span class="sl">Scan ${parseInt(wn)+1}</span><span class="sv">${wd.accuracy?wd.accuracy.toFixed(0):'?'}% acc | ${wd.kills}K | ${wd.dmgTaken}dmg${wd.avgTTK?' | '+wd.avgTTK.toFixed(1)+'s TTK':''}</span></div>
     `).join('')}
-    <div class="sr"><span class="sl">Target Priority</span><span class="sv d">${(a.targetPriority||'UNKNOWN').toUpperCase()}</span></div>
-    <div class="sr"><span class="sl">Target Switches</span><span class="sv">${a.targetSwitches} (${(a.targetSwitches/Math.max(a.shotsFired,1)*100).toFixed(0)}% of shots)</span></div>
-    <div class="sr"><span class="sl">TTK Weakness</span><span class="sv d">${a.weaknesses.find(w=>w.startsWith('slow-vs-'))?.replace('slow-vs-','').toUpperCase()||'NONE'}</span></div>
     </div>
-    <div class="sg"><h3>ENGAGEMENT</h3>
-    <div class="sr"><span class="sl">Range</span><span class="sv">${a.avgEngDist.toFixed(1)}m (${a.prefRange.toUpperCase()})</span></div>
-    <div class="sr"><span class="sl">Aggression</span><span class="sv">${(a.aggScore*100).toFixed(0)}%</span></div>
-    <div class="sr"><span class="sl">Reaction</span><span class="sv">${a.avgReac.toFixed(2)}s (best ${a.fastReac.toFixed(2)}s)</span></div>
-    <div class="sr"><span class="sl">Style</span><span class="sv d">${a.playstyle.toUpperCase()}</span></div>
-    </div>
-    <div class="sg"><h3>WEAKNESSES</h3>
-    <div class="sr"><span class="sl">Found</span><span class="sv d">${a.weaknesses.length} — ${a.weaknesses.join(', ').toUpperCase()||'NONE'}</span></div>
-    <div class="sr"><span class="sl">Strengths</span><span class="sv">${a.strengths.join(', ').toUpperCase()||'NONE'}</span></div>
-    </div>
-    <div class="sg"><h3>SIMULATION ENGINE</h3>
-    <div class="sr"><span class="sl">Simulations Run</span><span class="sv d">${Sim.simCount}</span></div>
-    <div class="sr"><span class="sl">Generations Evolved</span><span class="sv d">${Sim.gen}</span></div>
-    <div class="sr"><span class="sl">Clone IQ</span><span class="sv d">${Sim.iq}</span></div>
-    <div class="sr"><span class="sl">Versatility</span><span class="sv d">${Sim.versatility}/20 archetypes beaten</span></div>
-    <div class="sr"><span class="sl">Genome Parameters</span><span class="sv">${Object.keys(Sim.genome).length}</span></div>
-    <div class="sr"><span class="sl">Best Score</span><span class="sv d">${Sim.bestScore.toFixed(0)}</span></div>
-    <div class="sr"><span class="sl">Data Points</span><span class="sv">${dp}</span></div>
-    </div>
-    <div class="sg"><h3>SELF-PLAY & DYNASTY</h3>
-    <div class="sr"><span class="sl">Genome vs Genome Fights</span><span class="sv d">${Sim.totalGvG}</span></div>
-    <div class="sr"><span class="sl">Dynasty Champions</span><span class="sv d">${Sim.dynasty.length}</span></div>
-    <div class="sr"><span class="sl">Elite Pool Size</span><span class="sv">${Sim.elitePool.length}</span></div>
-    <div class="sr"><span class="sl">vs Dynasty Win Rate</span><span class="sv d">${Sim.selfPlayTotal>0?Math.floor(Sim.selfPlayWins/Sim.selfPlayTotal*100)+'%':'—'}</span></div>
-    <div class="sr"><span class="sl">Last Gen Leap</span><span class="sv">${Sim.genLeap>0?'+':''}${Sim.genLeap.toFixed(1)}</span></div>
-    <div class="sr"><span class="sl">Arms Race Trend</span><span class="sv d">${Sim.armsRace.length>2?(Sim.armsRace[Sim.armsRace.length-1].score>Sim.armsRace[Math.floor(Sim.armsRace.length/2)].score?'IMPROVING':'PLATEAU'):'EARLY'}</span></div>
-    <div class="sr"><span class="sl">Training Regime</span><span class="sv">archetypes + self-play + dynasty + stress</span></div>
-    </div>`;
+  `;
   document.getElementById('analyticScr').style.display='flex';GS='analytics';
+  // Auto-deploy countdown
+  let countdown=5;
+  const btn=document.querySelector('#analyticScr .btn-r');
+  btn.textContent=`DEPLOY ECHO (${countdown})`;
+  const cdI=setInterval(()=>{
+    countdown--;btn.textContent=countdown>0?`DEPLOY ECHO (${countdown})`:'DEPLOYING...';
+    if(countdown<=0){clearInterval(cdI);launchClone();}
+  },1000);
+  btn.onclick=()=>{clearInterval(cdI);launchClone();};
 }
 
 function launchClone(){
@@ -2141,6 +2101,8 @@ function launchClone(){
   document.getElementById('cloneIQ').style.opacity='1';
   hp=100;updateHp();ammo=MX;reloading=false;updateAmmo();
   heat=0;overheated=false;updateHeat();dashCd=0;nadeCd=0;meleeCd=0;
+  // Show controls again
+  ['hud','ctrls','mJoy','vig','scan'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='block';});
   setTimeout(()=>{enemies.push(mkClone());cloneActive=true;Sim.target+=3000;Sim.next();},2000);
 }
 
