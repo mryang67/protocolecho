@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<link rel="icon" href="data:,">
 <title>ECHO PROTOCOL v7</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
@@ -1603,51 +1604,6 @@ function updateEnemyAI(e,dt){
     if(e.type==='rusher')ep.add(perp.clone().multiplyScalar(Math.sin(now*6)*e.speed*0.2*dt));
   }
 
-  // === IQ-BASED REACTIVE DODGE ===
-  const iqFactor=Math.min(1,cl.iq/400); // 0-1 scale based on IQ
-  const timeSinceShot=now-lastPlayerShotTime;
-
-  // 1. SHOT REACTION DODGE: jerk sideways when player fires at clone
-  if(timeSinceShot<0.15+0.3*(1-iqFactor)&&cl.adaptPhase>=0){
-    // Perpendicular to player's aim direction
-    const dodgeX=-lastPlayerAimDir.z;
-    const dodgeZ=lastPlayerAimDir.x;
-    // Alternate dodge direction unpredictably based on time
-    const dodgeDir=Math.sin(now*7.3+cl.iq*0.1)>0?1:-1;
-    const dodgeStrength=3*(0.3+iqFactor*0.7)*(1+cl.adaptPhase*0.15);
-    mx+=dodgeX*dodgeDir*dodgeStrength*dt*60;
-    mz+=dodgeZ*dodgeDir*dodgeStrength*dt*60;
-  }
-
-  // 2. AIM PREDICTION DODGE: read where player is currently looking and pre-dodge
-  if(cl.adaptPhase>=1){
-    const aimX=-Math.sin(yaw),aimZ=-Math.cos(yaw);
-    const toClone=new THREE.Vector3(ep.x-cam.position.x,0,ep.z-cam.position.z).normalize();
-    const aimDot=aimX*toClone.x+aimZ*toClone.z;
-    // If player is aiming within 30 degrees of clone, dodge harder
-    if(aimDot>0.85){
-      const urgency=(aimDot-0.85)*6.7; // 0-1
-      const dX=-aimZ,dZ=aimX; // perpendicular to aim
-      const dDir=Math.sin(now*5.1+cl.iq*0.07)>0?1:-1;
-      mx+=dX*dDir*urgency*iqFactor*(2+cl.adaptPhase)*dt*60;
-      mz+=dZ*dDir*urgency*iqFactor*(2+cl.adaptPhase)*dt*60;
-    }
-  }
-
-  // 3. VELOCITY JITTER: high IQ clones add random direction changes
-  if(cl.adaptPhase>=2){
-    const jitter=iqFactor*0.5*(1+cl.adaptPhase*0.2);
-    mx+=(Math.random()-0.5)*jitter*dt*60;
-    mz+=(Math.random()-0.5)*jitter*dt*60;
-  }
-
-  // 4. POST-HIT JUKE: after getting hit, change movement pattern
-  if(now-lastCloneHitTime<0.4&&cl.adaptPhase>=1){
-    // Reverse strafe direction and add burst of random movement
-    mx+=(Math.random()-0.5)*iqFactor*3*dt*60;
-    mz+=(Math.random()-0.5)*iqFactor*3*dt*60;
-  }
-
   ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);ep.y=0;
 
   // Billboard HP bar toward camera
@@ -1803,6 +1759,40 @@ function updateCloneAI(cl,dt,dist,toP){
   }
   const ml=Math.sqrt(mx*mx+mz*mz)||1;
   ep.x+=mx/ml*cl.speed*dt;ep.z+=mz/ml*cl.speed*dt;
+
+  // === IQ-BASED REACTIVE DODGE (applied directly to position) ===
+  const iqFactor=Math.min(1,cl.iq/400);
+  const timeSinceShot=now-lastPlayerShotTime;
+  const pX2=new THREE.Vector3(-toP.z,0,toP.x); // perpendicular to player direction
+  // 1. Shot reaction: jerk sideways when player fires
+  if(timeSinceShot<0.15+0.3*(1-iqFactor)){
+    const dDir=Math.sin(now*7.3+cl.iq*0.1)>0?1:-1;
+    const str=3*(0.3+iqFactor*0.7)*(1+cl.adaptPhase*0.15)*dt;
+    ep.x+=pX2.x*dDir*str;ep.z+=pX2.z*dDir*str;
+  }
+  // 2. Aim prediction: dodge when player aims at clone
+  if(cl.adaptPhase>=1){
+    const aimX=-Math.sin(yaw),aimZ=-Math.cos(yaw);
+    const toCl=new THREE.Vector3(ep.x-cam.position.x,0,ep.z-cam.position.z).normalize();
+    const aimDot=aimX*toCl.x+aimZ*toCl.z;
+    if(aimDot>0.85){
+      const urg=(aimDot-0.85)*6.7;
+      const dDir=Math.sin(now*5.1+cl.iq*0.07)>0?1:-1;
+      ep.x+=(-aimZ)*dDir*urg*iqFactor*(2+cl.adaptPhase)*dt;
+      ep.z+=aimX*dDir*urg*iqFactor*(2+cl.adaptPhase)*dt;
+    }
+  }
+  // 3. Velocity jitter at phase 2+
+  if(cl.adaptPhase>=2){
+    const j=iqFactor*0.5*(1+cl.adaptPhase*0.2)*dt;
+    ep.x+=(Math.random()-0.5)*j;ep.z+=(Math.random()-0.5)*j;
+  }
+  // 4. Post-hit juke
+  if(now-lastCloneHitTime<0.4&&cl.adaptPhase>=1){
+    ep.x+=(Math.random()-0.5)*iqFactor*3*dt;
+    ep.z+=(Math.random()-0.5)*iqFactor*3*dt;
+  }
+
   ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);ep.y=0;
 
   // === AMMO + HEAT (identical to player mechanics) ===
@@ -2399,7 +2389,9 @@ function updateMM(){
 // GAME LOOP
 // ================================================================
 function update(){
-  if(GS!=='playing'){R.render(scene,cam);updateParts(0.016);requestAnimationFrame(update);return;}
+  requestAnimationFrame(update); // ALWAYS schedule next frame first
+  try{
+  if(GS!=='playing'){R.render(scene,cam);updateParts(0.016);return;}
   const dt=Math.min(clock.getDelta(),0.05);fc++;
   const keys=window._keys||{};let mx=moveInput.x,mz=moveInput.y;
   if(keys['w']||keys['arrowup'])mz=-1;if(keys['s']||keys['arrowdown'])mz=1;
@@ -2450,13 +2442,16 @@ function update(){
   updatePickups(dt);
 
   if(!waveActive&&enemies.length===0&&waveCd<=0){
+    try{
     if(wave<wCfg.length-1){waveActive=true;waveCd=2.5;hp=100;updateHp();startWave(wave+1);}
     else if(wave===wCfg.length-1&&!cloneActive){waveActive=true;compA();Sim.buildPlayerModel();if(!Sim.running)Sim.start();showCloneWarn();}
+    }catch(err){console.error('Wave transition error:',err);waveActive=true;}
   }
   if(waveCd>0)waveCd-=dt;
 
   recA(dt);updateParts(dt);updateMM();
-  R.render(scene,cam);requestAnimationFrame(update);
+  R.render(scene,cam);
+  }catch(err){console.error('Update error:',err);}
 }
 
 function startGame(){
