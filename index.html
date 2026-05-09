@@ -626,6 +626,7 @@ const Sim={
   },
 
   buildPlayerModel(){
+    const tt=Math.max(A.tMove+A.tStill,1);
     this.playerModel={avgSpeed:A.avgSpd,dodge:A.dodgePattern,strafeRatio:A.sL/Math.max(A.sR,1),
       accuracy:A.acc/100,avgEngDist:A.avgEngDist,reaction:A.avgReac,aggression:A.aggScore,
       fireRate:A.combatRhythm,burstLen:A.avgBurst,movePred:A.movePred,
