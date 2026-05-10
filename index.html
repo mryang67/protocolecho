@@ -11,10 +11,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 #C{width:100%;height:100%;display:block;position:fixed;top:0;left:0}
 #hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;display:none}
 #cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px}
-#cross::before,#cross::after{content:'';position:absolute;background:rgba(0,255,200,0.8)}
-#cross::before{width:2px;height:100%;left:50%;transform:translateX(-50%)}
-#cross::after{width:100%;height:2px;top:50%;transform:translateY(-50%)}
-#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:3px;background:#00ffc8;border-radius:50%}
+#cross::before,#cross::after{content:'';position:absolute;background:rgba(0,255,200,0.7)}
+#cross::before{width:1.5px;height:8px;left:50%;top:0;transform:translateX(-50%);box-shadow:0 14px 0 rgba(0,255,200,0.7)}
+#cross::after{width:8px;height:1.5px;top:50%;left:0;transform:translateY(-50%);box-shadow:14px 0 0 rgba(0,255,200,0.7)}
+#cross .dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:2px;background:rgba(0,255,200,0.5);border-radius:50%}
 /* Hit marker */
 #hitMarker{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;opacity:0;pointer-events:none;transition:opacity 0.08s}
 #hitMarker::before,#hitMarker::after{content:'';position:absolute;background:#fff}
@@ -26,6 +26,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
 #killFeed{position:absolute;top:80px;right:14px;pointer-events:none;text-align:right}
 .killMsg{color:#00ffc8;font-size:13px;letter-spacing:1px;opacity:1;transition:opacity 0.5s;margin-bottom:4px;text-shadow:0 0 8px rgba(0,255,200,0.3)}
 .killMsg.hs{color:#ff0044;text-shadow:0 0 8px rgba(255,0,68,0.3)}
+/* Floating damage numbers */
+.dmgNum{position:absolute;pointer-events:none;font-size:18px;font-weight:bold;letter-spacing:1px;opacity:1;transition:all 0.6s ease-out;text-shadow:0 0 6px currentColor}
+.dmgNum.crit{font-size:24px;color:#ff0044}
+.dmgNum.dealt{color:#00ffc8}
+.dmgNum.taken{color:#ff4400}
 #hpBar{position:absolute;bottom:18px;left:16px;width:200px;height:16px;background:rgba(0,0,0,0.6);border:1px solid rgba(0,255,200,0.3);border-radius:3px}
 #hpFill{height:100%;background:linear-gradient(90deg,#ff0044,#ff4400,#00ff88);width:100%;transition:width 0.15s;border-radius:2px}
 #hpText{position:absolute;bottom:38px;left:16px;color:#00ffc8;font-size:16px;font-weight:bold}
@@ -110,11 +115,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Co
   <button class="btn" onclick="startGame()">INITIATE</button>
   <button class="btn btn-r" onclick="openTraining()">WATCH TRAINING</button>
   <button class="btn" onclick="startEndlessFromTitle()" style="border-color:rgba(255,150,0,0.4);color:#ff9900">ENDLESS MODE</button>
-  <div style="margin-top:16px;text-align:center">
+  <div id="saveInfo" style="margin-top:12px;text-align:center;color:rgba(255,0,68,0.5);font-size:11px;letter-spacing:1px;display:none">
+    <div id="saveIQ"></div>
+    <div id="saveGames" style="color:rgba(0,255,200,0.3);font-size:10px;margin-top:3px"></div>
+  </div>
+  <div style="margin-top:12px;text-align:center">
     <label style="color:rgba(0,255,200,0.4);font-size:11px;letter-spacing:1px">SENSITIVITY</label><br>
     <input type="range" id="sensSlider" min="1" max="10" value="4" style="width:180px;margin-top:6px;accent-color:#00ffc8" oninput="setSens(this.value)">
     <div style="color:rgba(0,255,200,0.3);font-size:10px;margin-top:3px" id="sensVal">4</div>
   </div>
+  <div style="margin-top:8px"><button onclick="Save.reset().then(()=>location.reload())" style="background:none;border:none;color:rgba(255,0,68,0.2);font-family:inherit;font-size:9px;cursor:pointer;pointer-events:auto">RESET ECHO DATA</button></div>
 </div>
 <div id="trainPanel">
   <div id="trainTitle">CLONE TRAINING — LIVE</div>
@@ -226,6 +236,22 @@ function showKillNotif(type,headshot){
   setTimeout(()=>msg.remove(),2000);
   if(feed.children.length>4)feed.lastChild.remove();
 }
+// Floating damage numbers
+function showDmgNum(dmg,worldPos,type){
+  const hud=document.getElementById('hud');if(!hud)return;
+  const el=document.createElement('div');
+  el.className='dmgNum '+(type||'dealt')+(dmg>=55?' crit':'');
+  el.textContent=(type==='taken'?'-':'')+(dmg>=55?dmg+'!':dmg);
+  // Project 3D to screen
+  const v=worldPos.clone().project(cam);
+  const x=(v.x*0.5+0.5)*window.innerWidth;
+  const y=(-v.y*0.5+0.5)*window.innerHeight;
+  el.style.left=x+'px';el.style.top=y+'px';
+  el.style.position='absolute';
+  hud.appendChild(el);
+  requestAnimationFrame(()=>{el.style.top=(y-60)+'px';el.style.opacity='0';});
+  setTimeout(()=>el.remove(),700);
+}
 let lastP=new THREE.Vector3(0,1.7,0),lastY=0,lastPi=0,lastST=0,fc=0;
 // Mechanics state
 let heat=0,overheated=false; // weapon heat 0-100
@@ -254,6 +280,17 @@ aimHeatmap:{},
 shotsFired:0,shotsHit:0,acc:0,heads:0,bodyH:0,hsRate:0,
 shotT:[],burstL:[],avgBurst:0,tBetweenBursts:[],avgTBS:0,
 frUnderP:0,frRelax:0,reloadT:[],panicRld:0,tacRld:0,reloadAmmoLeft:[],
+reloadDuringCombat:0,reloadDuringSafe:0,avgReloadInterval:0,
+// Flick tracking
+flickEvents:[],   // {t, speed, dYaw, dPitch, hit, dist}
+flickKills:0,
+// Strafe pattern tracking
+strafeHistory:[], // recent strafe directions (-1 left, 1 right, 0 still)
+strafeSwitchTimes:[], // timestamps of direction changes
+avgStrafeHoldTime:0,  // how long player holds one strafe direction
+strafeRhythm:0,       // regularity of switches (0=random, 1=metronome)
+lastStrafeDir:0,
+strafePatternLen:0,   // detected pattern repeat length
 dmgD:0,dmgT:0,dps:0,
 engDist:[],avgEngDist:0,prefRange:'mid',
 killPos:[],engAngles:[],
@@ -323,6 +360,22 @@ function recA(dt){
   A.aimVH.push({t,dyaw:dY/SR,dpitch:dPi/SR,speed:aSpd});
   if(aSpd>A.maxAimSpd)A.maxAimSpd=aSpd;A.hBias+=dY;A.vBias+=dPi;
   if(aSpd>8)A.aimSnaps++;
+  // Flick detection: sudden high-speed aim followed by a shot
+  if(aSpd>6){
+    A.flickEvents.push({t:clock.elapsedTime,speed:aSpd,dYaw:dY/SR,dPitch:dPi/SR,hit:false,dist:0});
+    if(A.flickEvents.length>100)A.flickEvents.shift();
+  }
+  // Strafe pattern tracking
+  const strafeDir=Math.sin(ra)>0.2?1:(Math.sin(ra)<-0.2?-1:0);
+  if(strafeDir!==0){
+    A.strafeHistory.push({t:clock.elapsedTime,dir:strafeDir});
+    if(A.strafeHistory.length>200)A.strafeHistory.shift();
+    if(strafeDir!==A.lastStrafeDir&&A.lastStrafeDir!==0){
+      A.strafeSwitchTimes.push(clock.elapsedTime);
+      if(A.strafeSwitchTimes.length>50)A.strafeSwitchTimes.shift();
+    }
+    A.lastStrafeDir=strafeDir;
+  }
   if(sprintActive)A.sprintTime+=SR;
   if(enemies.length>0){
     let nr=null,nd=Infinity;
@@ -420,12 +473,12 @@ function compA(){
   A.aggScore=A.advC/Math.max(A.advC+A.retC,1);A.openRatio=1-(A.coverScore/tt);
   // Playstyle with ability usage
   const abilityRate=(A.dashCount+A.grenadeCount)/tt;
-  if(A.avgEngDist>22)A.playstyle='sniper';
-  else if(A.aggScore>0.65&&A.avgEngDist<10)A.playstyle='rusher';
-  else if(A.aggScore<0.3)A.playstyle='defensive';
-  else if(A.acc>55&&A.avgBurst<2.5)A.playstyle='precision';
+  if(A.avgEngDist>28&&A.aggScore<0.35)A.playstyle='sniper';
+  else if(A.aggScore>0.6&&A.avgEngDist<12)A.playstyle='rusher';
+  else if(A.aggScore<0.25&&A.avgEngDist>18)A.playstyle='defensive';
+  else if(A.acc>50&&A.avgBurst<2.5)A.playstyle='precision';
   else if(abilityRate>0.3&&A.dashCount>3)A.playstyle='ability-user';
-  else if(A.avgBurst>4)A.playstyle='spray';
+  else if(A.avgBurst>4&&A.acc<30)A.playstyle='spray';
   else A.playstyle='balanced';
   A.prefRange=A.avgEngDist<7?'close':A.avgEngDist<16?'mid':'long';
   const st=A.sL+A.sR,sr=A.sL/Math.max(A.sR,1);
@@ -463,6 +516,37 @@ function compA(){
   if(A.panicRld>A.tacRld*2&&A.reloadT.length>3)A.weaknesses.push('panic-reloader');
   if(A.reloadAmmoLeft.length>3){const avg=A.reloadAmmoLeft.reduce((s,v)=>s+v,0)/A.reloadAmmoLeft.length;if(avg>15)A.weaknesses.push('wastes-ammo-on-reload');}
   if(A.reloadT.length<2&&tt>40)A.weaknesses.push('forgets-to-reload');
+  if(A.reloadDuringCombat>A.reloadDuringSafe*2&&A.reloadT.length>3)A.weaknesses.push('reloads-in-danger');
+  // Flick analysis
+  if(A.flickEvents.length>5){
+    const flickHits=A.flickEvents.filter(f=>f.hit).length;
+    const flickAcc=flickHits/A.flickEvents.length;
+    A.flickAccuracy=flickAcc;
+    if(flickAcc>0.4)A.strengths.push('flick-aim');
+    if(flickAcc<0.15&&A.flickEvents.length>10)A.weaknesses.push('flick-misser');
+  }
+  // Strafe pattern analysis
+  if(A.strafeSwitchTimes.length>4){
+    const intervals=[];
+    for(let i=1;i<A.strafeSwitchTimes.length;i++)intervals.push(A.strafeSwitchTimes[i]-A.strafeSwitchTimes[i-1]);
+    A.avgStrafeHoldTime=intervals.reduce((s,v)=>s+v,0)/intervals.length;
+    // Rhythm regularity: low variance = predictable
+    const mean=A.avgStrafeHoldTime;
+    const variance=intervals.reduce((s,v)=>s+(v-mean)**2,0)/intervals.length;
+    A.strafeRhythm=1-Math.min(1,Math.sqrt(variance)/Math.max(mean,0.1));
+    // Detect repeating pattern length
+    if(A.strafeHistory.length>20){
+      const dirs=A.strafeHistory.slice(-40).map(s=>s.dir);
+      for(let pLen=2;pLen<=6;pLen++){
+        let matches=0,checks=0;
+        for(let i=pLen;i<dirs.length;i++){if(dirs[i]===dirs[i-pLen])matches++;checks++;}
+        if(checks>0&&matches/checks>0.7){A.strafePatternLen=pLen;break;}
+      }
+    }
+    if(A.strafeRhythm>0.7)A.weaknesses.push('rhythmic-strafe');
+    if(A.avgStrafeHoldTime>1.5)A.weaknesses.push('slow-strafe-switch');
+    if(A.strafePatternLen>0)A.weaknesses.push('strafe-pattern-'+A.strafePatternLen);
+  }
   if(A.dashWhenLowHp<A.dashWhenHighHp*0.3&&A.dashCount>3)A.weaknesses.push('no-escape-dash');
   if(A.acc>50)A.strengths.push('accurate');
   if(A.hsRate>20)A.strengths.push('headshot-hunter');
@@ -544,13 +628,22 @@ const Sim={
     aimCorr:0.5,predictW:0,antiPat:0,
     dashDodge:0.3,nadePressure:0.3,meleeCounter:0.3,comboExploit:0.2,
     archetypeAdapt:0.5,
-    // v6: expanded
-    punishReload:0.3,   // rush when opponent reloads
-    punishOverheat:0.3, // push during overheat
-    punishCooldown:0.3, // attack when abilities on cd
-    zoneControl:0.3,    // deny map areas
-    mirrorAdapt:0.3,    // counter own weaknesses
-    comboChain:0.3,     // chain dash+nade+melee sequences
+    punishReload:0.3,punishOverheat:0.3,punishCooldown:0.3,zoneControl:0.3,
+    mirrorAdapt:0.3,comboChain:0.3,
+    // ML-driven combat genes (replace hardcoded phase arrays)
+    fireAgg:0.5,       // 0=slow/controlled, 1=full spray
+    aimSkill:0.3,      // base accuracy multiplier
+    dodgeIntensity:0.5, // how aggressively to dodge
+    counterStrafe:0.3,  // counter-strafe strength
+    flickCounter:0.3,   // anti-flick jitter
+    reloadPredict:0.3,  // reload timing exploit
+    strafeSpeed:1.0,    // strafe oscillation speed
+    strafeChaos:0.3,    // multi-frequency strafe complexity
+    approachAgg:0.5,    // how aggressively to close distance
+    retreatThresh:0.2,  // HP threshold to retreat
+    burstControl:0.5,   // heat management vs DPS
+    nadeTiming:0.3,     // grenade usage aggression
+    dashAgg:0.3,        // offensive dash frequency
     finisherInstinct:0.3,// aggression scaling with enemy low hp
     adaptSpeed:0.5,     // how fast to shift strategy mid-fight
     coverPeek:0.3,      // peek-shoot from cover
@@ -566,36 +659,40 @@ const Sim={
 
   // Genome-vs-Genome: two evolved genomes battle with full abilities
   gvgFight(gA,gB){
+    const ga={...gA},gb={...gB};
     let aH=100,bH=100,aP={x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30};
     let bP={x:(Math.random()-0.5)*30,z:(Math.random()-0.5)*30};
     let aV={x:0,z:0},bV={x:0,z:0};const dt=0.2;let sT=0;
     let aSC=0,bSC=0,aDC=0,bDC=0,aNC=0,bNC=0,aMC=0,bMC=0;
     let aA=30,bA=30,aHt=0,bHt=0,aRL=0,bRL=0;
-    for(let step=0;step<150;step++){
+    for(let step=0;step<80;step++){
       sT+=dt;if(aH<=0||bH<=0)break;
+      if(step>25&&Math.abs(aH-bH)>60)break; // early termination on blowout
       const d2=Math.sqrt((aP.x-bP.x)**2+(aP.z-bP.z)**2)||1;
       // --- A movement ---
       const anx=(bP.x-aP.x)/d2,anz=(bP.z-aP.z)/d2,apx=-anz,apz=anx;
-      let am=0,az2=0,ad=d2-gA.engDist;
-      am+=anx*ad*0.1*gA.approach;az2+=anz*ad*0.1*gA.approach;
-      am+=apx*Math.sin(sT*gA.strafeF*1.3)*gA.strafeA;az2+=apz*Math.cos(sT*gA.strafeF*1.3)*gA.strafeA;
-      if(gA.predictW>0){am+=bV.x*gA.predictW*0.5;az2+=bV.z*gA.predictW*0.5;}
-      if(bH<40){am+=anx*(gA.finisherInstinct+gA.pressAgg);az2+=anz*(gA.finisherInstinct+gA.pressAgg);}
-      if(aH<gA.retreatHp*100){am-=anx*0.8;az2-=anz*0.8;}
-      if(bRL>0&&gA.punishReload>0.3){am+=anx*gA.punishReload*2;az2+=anz*gA.punishReload*2;}
-      if(gA.baitRetreat>0.4&&d2<10&&Math.sin(sT*0.5)>0.7){am-=anx*gA.baitRetreat;az2-=anz*gA.baitRetreat;}
+      let am=0,az2=0,ad=d2-ga.engDist;
+      am+=anx*ad*0.1*ga.approach;az2+=anz*ad*0.1*ga.approach;
+      am+=apx*Math.sin(sT*ga.strafeF*1.3)*ga.strafeA;az2+=apz*Math.cos(sT*ga.strafeF*1.3)*ga.strafeA;
+      if(ga.strafeChaos>0.2){am+=apx*Math.sin(sT*ga.strafeSpeed*2.3)*ga.strafeChaos*0.4;az2+=apz*Math.cos(sT*ga.strafeSpeed*2.1)*ga.strafeChaos*0.4;}
+      if(ga.predictW>0){am+=bV.x*ga.predictW*0.5;az2+=bV.z*ga.predictW*0.5;}
+      if(bH<40){am+=anx*(ga.finisherInstinct+ga.pressAgg);az2+=anz*(ga.finisherInstinct+ga.pressAgg);}
+      if(aH<ga.retreatHp*100){am-=anx*0.8;az2-=anz*0.8;}
+      if(bRL>0&&ga.punishReload>0.3){am+=anx*ga.punishReload*2;az2+=anz*ga.punishReload*2;}
+      if(ga.baitRetreat>0.4&&d2<10&&Math.sin(sT*0.5)>0.7){am-=anx*ga.baitRetreat;az2-=anz*ga.baitRetreat;}
       let al=Math.sqrt(am*am+az2*az2)||1;aV.x=am/al*6.5;aV.z=az2/al*6.5;
       aP.x=Math.max(-38,Math.min(38,aP.x+aV.x*dt));aP.z=Math.max(-38,Math.min(38,aP.z+aV.z*dt));
       // --- B movement ---
       const bnx=(aP.x-bP.x)/d2,bnz=(aP.z-bP.z)/d2,bpx=-bnz,bpz=bnx;
-      let bm=0,bz2=0,bd=d2-gB.engDist;
-      bm+=bnx*bd*0.1*gB.approach;bz2+=bnz*bd*0.1*gB.approach;
-      bm+=bpx*Math.sin(sT*gB.strafeF*1.5+1)*gB.strafeA;bz2+=bpz*Math.cos(sT*gB.strafeF*1.5+1)*gB.strafeA;
-      if(gB.predictW>0){bm+=aV.x*gB.predictW*0.5;bz2+=aV.z*gB.predictW*0.5;}
-      if(aH<40){bm+=bnx*(gB.finisherInstinct+gB.pressAgg);bz2+=bnz*(gB.finisherInstinct+gB.pressAgg);}
-      if(bH<gB.retreatHp*100){bm-=bnx*0.8;bz2-=bnz*0.8;}
-      if(aRL>0&&gB.punishReload>0.3){bm+=bnx*gB.punishReload*2;bz2+=bnz*gB.punishReload*2;}
-      if(gB.baitRetreat>0.4&&d2<10&&Math.sin(sT*0.7)>0.7){bm-=bnx*gB.baitRetreat;bz2-=bnz*gB.baitRetreat;}
+      let bm=0,bz2=0,bd=d2-gb.engDist;
+      bm+=bnx*bd*0.1*gb.approach;bz2+=bnz*bd*0.1*gb.approach;
+      bm+=bpx*Math.sin(sT*gb.strafeF*1.5+1)*gb.strafeA;bz2+=bpz*Math.cos(sT*gb.strafeF*1.5+1)*gb.strafeA;
+      if(gb.strafeChaos>0.2){bm+=bpx*Math.sin(sT*gb.strafeSpeed*2.5+1)*gb.strafeChaos*0.4;bz2+=bpz*Math.cos(sT*gb.strafeSpeed*2.3+1)*gb.strafeChaos*0.4;}
+      if(gb.predictW>0){bm+=aV.x*gb.predictW*0.5;bz2+=aV.z*gb.predictW*0.5;}
+      if(aH<40){bm+=bnx*(gb.finisherInstinct+gb.pressAgg);bz2+=bnz*(gb.finisherInstinct+gb.pressAgg);}
+      if(bH<gb.retreatHp*100){bm-=bnx*0.8;bz2-=bnz*0.8;}
+      if(aRL>0&&gb.punishReload>0.3){bm+=bnx*gb.punishReload*2;bz2+=bnz*gb.punishReload*2;}
+      if(gb.baitRetreat>0.4&&d2<10&&Math.sin(sT*0.7)>0.7){bm-=bnx*gb.baitRetreat;bz2-=bnz*gb.baitRetreat;}
       let bl=Math.sqrt(bm*bm+bz2*bz2)||1;bV.x=bm/bl*6.5;bV.z=bz2/bl*6.5;
       bP.x=Math.max(-38,Math.min(38,bP.x+bV.x*dt));bP.z=Math.max(-38,Math.min(38,bP.z+bV.z*dt));
       // Cooldowns
@@ -603,23 +700,31 @@ const Sim={
       aHt=Math.max(0,aHt-12*dt);bHt=Math.max(0,bHt-12*dt);
       const dist=Math.sqrt((aP.x-bP.x)**2+(aP.z-bP.z)**2)||1;
       // A abilities
-      if(aDC<=0&&gA.dashDodge>0.3&&Math.random()<0.04){aDC=3;aP.x+=apx*(Math.random()-0.5)*gA.dashDodge*6;aP.z+=apz*(Math.random()-0.5)*gA.dashDodge*6;}
-      if(aDC<=0&&gA.comboChain>0.3&&dist>3&&dist<9&&aMC<=0.5&&Math.random()<0.03){aDC=3;aP.x+=anx*5;aP.z+=anz*5;}
-      if(aNC<=0&&dist<18&&dist>4&&Math.random()<gA.nadePressure*0.04){aNC=5;if(dist<6)bH-=30;}
+      // Dodge intensity reduces opponent's hit chance
+      if(aDC<=0&&ga.dashDodge>0.3&&Math.random()<0.04){aDC=3;aP.x+=apx*(Math.random()-0.5)*ga.dashDodge*6;aP.z+=apz*(Math.random()-0.5)*ga.dashDodge*6;}
+      if(aDC<=0&&ga.comboChain>0.3&&dist>3&&dist<9&&Math.random()<0.03){aDC=3;aP.x+=anx*5;aP.z+=anz*5;}
+      if(aNC<=0&&dist<18&&dist>4&&Math.random()<ga.nadePressure*0.04+ga.nadeTiming*0.02){aNC=5;if(dist<10)bH-=30;}
       // melee removed
       // B abilities
-      if(bDC<=0&&gB.dashDodge>0.3&&Math.random()<0.04){bDC=3;bP.x+=bpx*(Math.random()-0.5)*gB.dashDodge*6;bP.z+=bpz*(Math.random()-0.5)*gB.dashDodge*6;}
-      if(bDC<=0&&gB.comboChain>0.3&&dist>3&&dist<9&&bMC<=0.5&&Math.random()<0.03){bDC=3;bP.x+=bnx*5;bP.z+=bnz*5;}
-      if(bNC<=0&&dist<18&&dist>4&&Math.random()<gB.nadePressure*0.04){bNC=5;if(dist<6)aH-=30;}
+      if(bDC<=0&&gb.dashDodge>0.3&&Math.random()<0.04){bDC=3;bP.x+=bpx*(Math.random()-0.5)*gb.dashDodge*6;bP.z+=bpz*(Math.random()-0.5)*gb.dashDodge*6;}
+      if(bDC<=0&&gb.comboChain>0.3&&dist>3&&dist<9&&Math.random()<0.03){bDC=3;bP.x+=bnx*5;bP.z+=bnz*5;}
+      if(bNC<=0&&dist<18&&dist>4&&Math.random()<gb.nadePressure*0.04+gb.nadeTiming*0.02){bNC=5;if(dist<10)aH-=30;}
       // melee removed
-      // Shooting A
-      if(aRL<=0&&aHt<100&&aA>0){aSC-=dt;if(aSC<=0&&dist<35){aSC=0.12+(1-gA.aimCorr)*0.3;aA--;aHt+=4;
-        let h=0.2+gA.aimCorr*0.35;if(gA.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(bRL>0)h+=0.1;if(Math.random()<h)bH-=25;}}
+      // Shooting A — fireAgg controls rate, aimSkill controls accuracy
+      if(aRL<=0&&aHt<100&&aA>0){aSC-=dt;if(aSC<=0&&dist<35){aSC=Math.max(0.08,0.25-ga.fireAgg*0.18);aA--;aHt+=4;
+        let h=0.15+ga.aimSkill*0.4;if(ga.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(bRL>0)h+=ga.punishReload*0.12;if(Math.random()<h)bH-=25;}}
       if(aA<=0&&aRL<=0){aRL=1.3;aA=30;}
       // Shooting B
-      if(bRL<=0&&bHt<100&&bA>0){bSC-=dt;if(bSC<=0&&dist<35){bSC=0.12+(1-gB.aimCorr)*0.3;bA--;bHt+=4;
-        let h=0.2+gB.aimCorr*0.35;if(gB.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(aRL>0)h+=0.1;if(Math.random()<h)aH-=25;}}
+      if(bRL<=0&&bHt<100&&bA>0){bSC-=dt;if(bSC<=0&&dist<35){bSC=Math.max(0.08,0.25-gb.fireAgg*0.18);bA--;bHt+=4;
+        let h=0.15+gb.aimSkill*0.4;if(gb.leadAim>0.3)h+=0.08;h*=Math.max(0.3,1-dist/40);if(aRL>0)h+=gb.punishReload*0.12;if(Math.random()<h)aH-=25;}}
       if(bA<=0&&bRL<=0){bRL=1.3;bA=30;}
+      // Mid-fight dominance: leader plays to dominant stat
+      if(step%10===0&&step>10){
+        if(aH>bH+15){ga.approachAgg=Math.min(1.5,ga.approachAgg+0.05);ga.pressAgg=Math.min(1.5,ga.pressAgg+0.05);}
+        else if(bH>aH+15){ga.strafeChaos=Math.min(1.5,ga.strafeChaos+0.05);ga.dodgeReact=Math.min(1.5,ga.dodgeReact+0.05);}
+        if(bH>aH+15){gb.approachAgg=Math.min(1.5,gb.approachAgg+0.05);gb.pressAgg=Math.min(1.5,gb.pressAgg+0.05);}
+        else if(aH>bH+15){gb.strafeChaos=Math.min(1.5,gb.strafeChaos+0.05);gb.dodgeReact=Math.min(1.5,gb.dodgeReact+0.05);}
+      }
     }
     let sc=(bH<=0?200:0)-(aH<=0?200:0)+(100-bH)*2-(100-aH)*2;
     if(bH<=0&&sT<12)sc+=80;if(bH<=0&&aH>70)sc+=60;
@@ -652,6 +757,17 @@ const Sim={
       reloadRate:A.reloadT.length/Math.max(tt,1),
       panicReloadRatio:A.reloadT.length>0?A.panicRld/A.reloadT.length:0.5,
       avgAmmoAtReload:A.reloadAmmoLeft.length>0?A.reloadAmmoLeft.reduce((s,v)=>s+v,0)/A.reloadAmmoLeft.length:0,
+      reloadInCombatRatio:A.reloadT.length>0?A.reloadDuringCombat/A.reloadT.length:0.5,
+      avgReloadInterval:A.avgReloadInterval||8,
+      // Flick data
+      flickAccuracy:A.flickAccuracy||0,
+      flickRate:A.flickEvents.length/Math.max(tt,1),
+      isFlicker:A.aimProfile==='flick',
+      // Strafe patterns
+      avgStrafeHoldTime:A.avgStrafeHoldTime||1,
+      strafeRhythm:A.strafeRhythm||0,
+      strafePatternLen:A.strafePatternLen||0,
+      strafeSwitchRate:A.strafeSwitchTimes.length/Math.max(tt,1),
       waveAccuracies:Object.fromEntries(Object.entries(A.waveData).map(([k,v])=>[k,v.accuracy||0])),
     };
   },
@@ -667,8 +783,9 @@ const Sim={
     // Opponent state tracking for punishment
     let pReloading=0,pAmmo=30,pLastShot=0;
 
-    for(let step=0;step<150;step++){
+    for(let step=0;step<80;step++){
       simT+=dt;if(cHp<=0||pHp<=0)break;
+      if(step>30&&(cHp-pHp>60||pHp-cHp>60))break; // early termination on blowout
 
       // --- OPPONENT MOVEMENT ---
       pDodgePhase+=dt*model.dirChangeRate;
@@ -788,7 +905,7 @@ const Sim={
 
   runBatch(){
     if(!this.playerModel||this.simCount>=this.target)return;
-    const POP=20;
+    const POP=14;
     let pop=[];
     for(let i=0;i<POP;i++){
       pop.push(this.bestGenome&&Math.random()<0.7?this.mutate(this.bestGenome,0.08+Math.random()*0.2):this.mutate(this.genome,0.25));
@@ -797,32 +914,27 @@ const Sim={
     pop.push({...this.genome});
 
     // Pre-compute expected fights per genome for sim count
-    const _dynastyFights=Math.min(this.dynasty.length,4);
-    const _eliteFights=Math.min(this.elitePool.length,3);
-    const _selfPlayPerGenome=4+_dynastyFights+_eliteFights;
+    const _dynastyFights=Math.min(this.dynasty.length,3);
+    const _eliteFights=Math.min(this.elitePool.length,2);
+    const _selfPlayPerGenome=2+_dynastyFights+_eliteFights;
 
     const scores=pop.map(g=>{
       let total=0;
       // Test vs PLAYER (5 varied scenarios)
-      for(let s=0;s<5;s++){
+      for(let s=0;s<3;s++){
         const vm={...this.playerModel};
-        vm.avgSpeed*=0.75+Math.random()*0.5;vm.accuracy*=0.75+Math.random()*0.5;
-        if(s>=3){vm.aggression=Math.random();vm.dodge=['circle-strafe','erratic','minimal','dash-dodge'][Math.floor(Math.random()*4)];}
-        total+=this.simFight(g,vm)*1.2; // player weight higher
+        vm.avgSpeed*=0.7+Math.random()*0.6;vm.accuracy*=0.7+Math.random()*0.6;
+        if(s===2){vm.aggression=Math.random();vm.dodge=['circle-strafe','erratic','minimal','dash-dodge'][Math.floor(Math.random()*4)];}
+        total+=this.simFight(g,vm)*1.2;
       }
-      // KILL DRILLS: assassination (player low HP), clutch (clone low HP), finisher
-      for(let d=0;d<3;d++){
-        const vm={...this.playerModel};
-        vm.avgSpeed*=0.8+Math.random()*0.4;
-        const origFight=this.simFight;
-        // Hack: reduce starting HP for drills
-        const saved=this.simFight;
-        if(d===0){vm.accuracy*=0.5;total+=this.simFight(g,vm)*0.8;} // easy target - train to kill fast
-        if(d===1){vm.accuracy*=1.3;vm.aggression=0.9;total+=this.simFight(g,vm)*0.6;} // aggressive player - train survival
-        if(d===2){vm.dodge='erratic';vm.avgSpeed*=1.5;total+=this.simFight(g,vm)*0.7;} // hard dodger - train tracking
+      // KILL DRILLS: 2 scenarios
+      for(let d=0;d<2;d++){
+        const vm={...this.playerModel};vm.avgSpeed*=0.8+Math.random()*0.4;
+        if(d===0){vm.accuracy*=0.5;total+=this.simFight(g,vm)*0.8;}
+        else{vm.accuracy*=1.3;vm.aggression=0.9;total+=this.simFight(g,vm)*0.7;}
       }
-      // Test vs ALL 20 ARCHETYPES
-      ARCHETYPES.forEach(arch=>{
+      // Test vs 10 SAMPLED ARCHETYPES (not all 20)
+      for(let ai=0;ai<10;ai++){const arch=ARCHETYPES[Math.floor(Math.random()*ARCHETYPES.length)];
         const am={avgSpeed:arch.avgSpeed,dodge:arch.dodge,strafeRatio:1,accuracy:arch.accuracy,
           avgEngDist:arch.range,reaction:1.5,aggression:arch.aggression,fireRate:arch.fireRate,
           burstLen:3,movePred:0.3,prefPos:[],weaknesses:[],coverUse:arch.cover,
@@ -830,11 +942,11 @@ const Sim={
           dashRate:arch.dashRate,nadeRate:arch.nadeRate,meleeRate:arch.meleeRate,
           dashBias:0.5,combos:[],meleeAfterDash:0};
         total+=this.simFight(g,am)*0.5;
-      });
+      }
       // ===== SELF-PLAY TOURNAMENT: genomes fight EACH OTHER =====
       // Round-robin subset: each genome fights 4 random other genomes from this population
       let spScore=0,spFights=0;
-      for(let r=0;r<4;r++){
+      for(let r=0;r<2;r++){
         const oppIdx=Math.floor(Math.random()*pop.length);
         if(pop[oppIdx]===g) continue;
         const result=this.gvgFight(g,pop[oppIdx]);
@@ -845,18 +957,15 @@ const Sim={
       total+=spScore*0.5;
 
       // ===== DYNASTY FIGHTS: fight champion genomes from PAST GENERATIONS =====
-      const dynastyFights=Math.min(this.dynasty.length, 4);
+      const dynastyFights=Math.min(this.dynasty.length, 3);
       for(let d=0;d<dynastyFights;d++){
-        // Fight against champions in reverse-chronological order (newest first)
         const champ=this.dynasty[this.dynasty.length-1-d];
         const result=this.gvgFight(g,champ.genome);
-        // Must beat past champions to prove improvement — high weight
         total+=result*0.7;
         this.totalGvG++;
       }
 
-      // ===== ELITE POOL: fight the 6 best genomes seen recently =====
-      const eliteFights=Math.min(this.elitePool.length, 3);
+      const eliteFights=Math.min(this.elitePool.length, 2);
       for(let e=0;e<eliteFights;e++){
         const result=this.gvgFight(g,this.elitePool[e]);
         total+=result*0.6;
@@ -870,9 +979,8 @@ const Sim={
         cm.avgSpeed*=1.2;cm.dashRate=Math.min(0.5,pm.dashRate*1.5);
         total+=this.simFight(g,cm)*0.7;
       }
-      // STRESS TESTS
-      for(let st=0;st<2;st++){
-        const stress={avgSpeed:4+Math.random()*3,dodge:['erratic','dash-dodge','circle-strafe'][st%3],
+      // STRESS TEST (1)
+      {const stress={avgSpeed:4+Math.random()*3,dodge:['erratic','dash-dodge','circle-strafe'][Math.floor(Math.random()*3)],
           strafeRatio:1,accuracy:0.4+Math.random()*0.3,avgEngDist:6+Math.random()*16,
           reaction:0.8,aggression:0.5+Math.random()*0.5,fireRate:3+Math.random()*3,
           burstLen:3,movePred:0.5,prefPos:[],weaknesses:[],coverUse:Math.random()*0.5,
@@ -944,7 +1052,7 @@ const Sim={
     }
 
     // Estimate total fights this batch
-    this.simCount+=POP*(5+3+ARCHETYPES.length+_selfPlayPerGenome+1+2+1);
+    this.simCount+=POP*(3+2+10+_selfPlayPerGenome+1+2+1);
     this.gen++;
     if(this.simCount>8000)this.phase='mastered';
     else if(this.simCount>4000)this.phase='advanced';
@@ -961,13 +1069,87 @@ const Sim={
 
   start(){this.running=true;this.phase='collecting';document.getElementById('simHud').style.opacity='1';this.next();},
   next(){if(!this.running||this.simCount>=this.target)return;
-    (window.requestIdleCallback||setTimeout)(()=>{this.runBatch();if(this.running)this.next();},window.requestIdleCallback?{timeout:60}:15);},
+    // Time-budgeted: run as many batches as possible in 12ms
+    const deadline=performance.now()+12;
+    while(performance.now()<deadline&&this.running&&this.simCount<this.target){this.runBatch();}
+    // Zero-delay reschedule via MessageChannel
+    if(this.running&&this.simCount<this.target){
+      if(!this._mc){this._mc=new MessageChannel();this._mc.port1.onmessage=()=>this.next();}
+      this._mc.port2.postMessage(0);
+    }
+  },
   updateHUD(){
     const p=Math.min(100,(this.simCount/this.target)*100);
     document.getElementById('simCount').textContent=`SIMS: ${this.simCount} | GEN ${this.gen} | GvG: ${this.totalGvG}`;
     document.getElementById('simFill').style.width=p+'%';
     document.getElementById('simPhase').textContent=`${this.phase.toUpperCase()} | VERS: ${this.versatility}/20 | DYNASTY: ${this.dynasty.length}`;
   }
+};
+
+// ================================================================
+// PERSISTENT SAVE SYSTEM — echo remembers across sessions
+// ================================================================
+const Save={
+  key:'echo-protocol-v7',
+  _gamesPlayed:0,_totalKills:0,
+  async load(){
+    try{
+      if(!window.storage)return null;
+      const r=await window.storage.get(this.key);
+      if(!r)return null;
+      return JSON.parse(r.value);
+    }catch(e){return null;}
+  },
+  async save(data){
+    try{if(!window.storage)return;await window.storage.set(this.key,JSON.stringify(data));}catch(e){}
+  },
+  async saveGameState(){
+    const data={
+      genome:Sim.bestGenome||Sim.genome,
+      simCount:Sim.simCount,gen:Sim.gen,iq:Sim.iq,
+      bestScore:Sim.bestScore,versatility:Sim.versatility,
+      dynasty:Sim.dynasty.slice(-5).map(d=>({genome:d.genome,score:d.score,gen:d.gen})),
+      elitePool:Sim.elitePool.slice(0,3),
+      player:{
+        accuracy:A.acc,playstyle:A.playstyle,aimProfile:A.aimProfile,
+        dodgePattern:A.dodgePattern,avgEngDist:A.avgEngDist,
+        weaknesses:A.weaknesses.slice(0,10),strengths:A.strengths.slice(0,5),
+        avgStrafeHold:A.avgStrafeHoldTime,strafeRhythm:A.strafeRhythm,
+        strafePattern:A.strafePatternLen,flickAccuracy:A.flickAccuracy||0,
+        isFlicker:A.aimProfile==='flick',
+        panicReloadRatio:A.reloadT.length>0?A.panicRld/A.reloadT.length:0.5,
+        movePred:A.movePred,aggScore:A.aggScore,
+      },
+      gamesPlayed:this._gamesPlayed+1,
+      totalKills:kills+this._totalKills,
+      lastPlayed:Date.now(),version:7,
+    };
+    this._gamesPlayed=data.gamesPlayed;
+    this._totalKills=data.totalKills;
+    await this.save(data);
+  },
+  async restore(){
+    const data=await this.load();
+    if(!data||data.version!==7)return false;
+    if(data.genome){Sim.genome={...Sim.genome,...data.genome};Sim.bestGenome={...data.genome};}
+    if(data.simCount)Sim.simCount=data.simCount;
+    if(data.gen)Sim.gen=data.gen;
+    if(data.iq)Sim.iq=data.iq;
+    if(data.bestScore>-Infinity)Sim.bestScore=data.bestScore;
+    if(data.versatility)Sim.versatility=data.versatility;
+    if(data.dynasty)Sim.dynasty=data.dynasty;
+    if(data.elitePool)Sim.elitePool=data.elitePool;
+    this._gamesPlayed=data.gamesPlayed||0;
+    this._totalKills=data.totalKills||0;
+    const si=document.getElementById('saveInfo');
+    if(si){
+      si.style.display='block';
+      document.getElementById('saveIQ').textContent=`RETURNING ECHO — IQ: ${Sim.iq} | GEN ${Sim.gen}`;
+      document.getElementById('saveGames').textContent=`${this._gamesPlayed} games | ${this._totalKills} kills | ${Sim.simCount} sims`;
+    }
+    return true;
+  },
+  async reset(){try{if(window.storage)await window.storage.delete(this.key);}catch(e){}}
 };
 
 // ================================================================
@@ -1482,6 +1664,18 @@ function mkClone(){
   cl.pMeleeRate=A.meleeCount/Math.max(A.tMove+A.tStill,1);
   cl.pCombos=A.abilityComboPatterns;
   cl.archetypeScores={...Sim.archetypeScores};
+  // Strafe counter data
+  cl.pStrafeHold=A.avgStrafeHoldTime||1;
+  cl.pStrafeRhythm=A.strafeRhythm||0;
+  cl.pStrafePattern=A.strafePatternLen||0;
+  cl.pFlickAcc=A.flickAccuracy||0;
+  cl.pIsFlicker=A.aimProfile==='flick';
+  cl.pReloadInterval=A.avgReloadInterval||8;
+  cl.pReloadInCombat=A.reloadDuringCombat/(Math.max(A.reloadT.length,1));
+  // Counter-strafe state
+  cl.counterStrafeDir=1;
+  cl.counterStrafeTimer=0;
+  cl.lastPlayerStrafeDir=0;
   // *** EXACT PLAYER STATS — same HP, speed, damage ***
   cl.hp=100;cl.maxHp=100;
   cl.damage=25; // same as player body shot
@@ -1509,6 +1703,13 @@ function mkClone(){
   cl.shotsFiredByClone=0;cl.shotsHitByClone=0;
   cl.lastDashTime=0;cl.lastNadeTime=0;cl.lastMeleeTime=0;
   cl.comboState='';cl.comboTimer=0;
+  // Live fight stats for dominance tracking
+  cl.fightDmgDealt=0;cl.fightDmgTaken=0;
+  cl.fightDodges=0;cl.fightHitsTaken=0;
+  cl.fightDashesUsed=0;cl.fightNadesUsed=0;
+  cl.fightStartHp=100;cl.playerStartHp=100;
+  cl.dominantStat='none'; // 'accuracy','evasion','aggression','control'
+  cl.dominanceTimer=0;
   // Visual: make clone a distinctive bright cyan warrior
   const cloneMat=new THREE.MeshStandardMaterial({color:0x00ffc8,roughness:0.3,metalness:0.6,emissive:0x00ffc8,emissiveIntensity:0.5});
   const cloneDarkMat=new THREE.MeshStandardMaterial({color:0x008866,roughness:0.3,metalness:0.7,emissive:0x00aa88,emissiveIntensity:0.3});
@@ -1646,7 +1847,7 @@ function updateCloneAI(cl,dt,dist,toP){
     const dIQ=Math.floor(cl.iq*(0.15+np*0.17));
     document.getElementById('iqText').textContent=`CLONE IQ: ${dIQ}`;
     document.getElementById('iqFill').style.width=Math.min(100,dIQ/2.5)+'%';
-    document.getElementById('versText').textContent=`VERSATILITY: ${cl.versatility}/10 | PHASE ${np}`;
+    document.getElementById('versText').textContent=`PHASE ${np} | ${cl.dominantStat!=='none'?cl.dominantStat.toUpperCase()+' DOMINANT':'ANALYZING'}`;
   }
   // Weighted velocity prediction from rolling window
   const pV={x:cam.position.x-cl.lastPPos.x,z:cam.position.z-cl.lastPPos.z};
@@ -1661,102 +1862,100 @@ function updateCloneAI(cl,dt,dist,toP){
   const nPx=toP.x,nPz=toP.z,pX=-nPz,pZ=nPx;
   let mx=0,mz=0;const t=clock.elapsedTime;
 
-  // === MOVEMENT — full speed from start, behavior evolves ===
+  // === MOVEMENT — fully genome-driven, phase only scales intensity ===
   cl.speed=6.5; // always match player
-  if(cl.adaptPhase===0){
-    mx=nPx*0.5;mz=nPz*0.5;
-    mx+=pX*Math.sin(t*2.0)*0.5;mz+=pZ*Math.sin(t*2.0)*0.5; // active strafe from start
-    mx+=pX*Math.cos(t*3.3)*0.25;mz+=pZ*Math.cos(t*3.3)*0.25; // dual freq
-  }else if(cl.adaptPhase===1){
-    const dd=dist-g.engDist;mx=nPx*dd*0.1*g.approach;mz=nPz*dd*0.1*g.approach;
-    mx+=pX*Math.sin(t*g.strafeF*1.5)*g.strafeA*0.9;mz+=pZ*Math.sin(t*g.strafeF*1.5)*g.strafeA*0.9;
-    mx+=pX*Math.cos(t*3.5)*0.3;mz+=pZ*Math.cos(t*3.5)*0.3; // secondary strafe
-  }else if(cl.adaptPhase===2){
-    const dd=dist-g.engDist;mx=nPx*dd*0.1*g.approach;mz=nPz*dd*0.1*g.approach;
-    mx+=pX*Math.sin(t*g.strafeF*1.5)*g.strafeA*1.2;mz+=pZ*Math.sin(t*g.strafeF*1.5)*g.strafeA*1.2;
-    mx+=pX*Math.sin(t*3.1)*0.3;mz+=pZ*Math.cos(t*2.7)*0.3; // double-frequency strafe
-    if(cl.pDodge.includes('left')){mx+=pX*0.3;mz+=pZ*0.3;}
-    else if(cl.pDodge.includes('right')){mx-=pX*0.3;mz-=pZ*0.3;}
+  const ps2=cl.adaptPhase/5; // 0-1 phase scale
+  const dd=dist-g.engDist;
+  // Approach/retreat: genome controls aggression, phase scales commitment
+  mx=nPx*dd*(0.05+g.approachAgg*0.1+ps2*0.03);
+  mz=nPz*dd*(0.05+g.approachAgg*0.1+ps2*0.03);
+  // Low HP retreat: genome-driven threshold
+  if(cl.hp<cl.maxHp*g.retreatThresh){mx-=nPx*0.4;mz-=nPz*0.4;}
 
-  }else if(cl.adaptPhase===3){
-    const dd=dist-g.engDist;mx=nPx*dd*0.12*g.approach;mz=nPz*dd*0.12*g.approach;
-    mx+=pX*(Math.sin(t*g.strafeF*1.8)+Math.sin(t*3.3)*0.5+Math.sin(t*5.7)*0.3)*g.strafeA;
-    mz+=pZ*(Math.cos(t*g.strafeF*1.8)+Math.cos(t*3.3)*0.5+Math.cos(t*5.7)*0.3)*g.strafeA;
-    cl.weakTargets.forEach(w=>{
-      if(w==='rear-blind'){mx+=(cam.position.x-nPx*10-ep.x)*0.025;mz+=(cam.position.z-nPz*10-ep.z)*0.025;}
-      if(w==='static-target'||w==='stationary'){mx+=nPx*0.5;mz+=nPz*0.5;}
-      if(w==='left-bias'){mx+=pX*0.4;mz+=pZ*0.4;}if(w==='right-bias'){mx-=pX*0.4;mz-=pZ*0.4;}
-      if(w==='no-cover'){mx+=nPx*0.35;mz+=nPz*0.35;}
-    });
-    if(cl.pRange>18&&dist>10){mx+=nPx*0.6;mz+=nPz*0.6;}
-    if(cl.pRange<7&&dist<12){mx-=nPx*0.3;mz-=nPz*0.3;}
+  // Strafe: genome controls frequency, amplitude, and chaos layers
+  const sF=g.strafeSpeed*(1+ps2*0.5); // frequency scales with phase
+  const sA=g.strafeA*(0.6+ps2*0.6); // amplitude scales with phase
+  mx+=pX*Math.sin(t*sF)*sA;mz+=pZ*Math.sin(t*sF)*sA;
+  // Chaos layers: genome.strafeChaos controls how many extra frequencies
+  if(g.strafeChaos>0.2){mx+=pX*Math.sin(t*sF*2.3)*sA*g.strafeChaos*0.5;mz+=pZ*Math.cos(t*sF*2.1)*sA*g.strafeChaos*0.5;}
+  if(g.strafeChaos>0.5){mx+=pX*Math.sin(t*sF*4.1)*sA*g.strafeChaos*0.25;mz+=pZ*Math.cos(t*sF*3.7)*sA*g.strafeChaos*0.25;}
+  if(g.strafeChaos>0.8){mx+=pX*Math.sin(t*sF*7.3)*sA*g.strafeChaos*0.12;mz+=pZ*Math.cos(t*sF*6.9)*sA*g.strafeChaos*0.12;}
 
-  }else if(cl.adaptPhase===4){
+  // Prediction: blend toward predicted player position (genome.predictW scales)
+  const predStr=g.predictW*(0.1+ps2*0.4);
+  if(predStr>0.05){
     const pdx=cl.predPos.x-ep.x,pdz=cl.predPos.z-ep.z,pdi=Math.sqrt(pdx*pdx+pdz*pdz)||1;
-    mx=(pdx/pdi)*0.45+nPx*0.3;mz=(pdz/pdi)*0.45+nPz*0.3;
-    mx+=pX*(Math.sin(t*3.7)*0.3+Math.sin(t*5.8)*0.22+Math.sin(t*8.1)*0.13);
-    mz+=pZ*(Math.cos(t*4.1)*0.3+Math.cos(t*6.3)*0.22+Math.cos(t*9.7)*0.13);
+    mx+=(pdx/pdi)*predStr;mz+=(pdz/pdi)*predStr;
+  }
+
+  // Weakness exploit: genome.weakExploit scales how much to act on data
+  const wStr=g.weakExploit*(0.3+ps2*0.7);
+  if(wStr>0.1){
     cl.weakTargets.forEach(w=>{
-      if(w==='predictable-movement'){mx+=predVx*45;mz+=predVz*45;}
-      if(w==='panic-fire'&&hp<50){mx+=nPx*0.9;mz+=nPz*0.9;}
-      if(w==='no-dash-usage'){mx+=nPx*0.4;mz+=nPz*0.4;}
-      if(w==='no-escape-dash'&&hp<30){mx+=nPx*1.2;mz+=nPz*1.2;}
-      if(w==='corner-camper'){mx+=(0-ep.x)*0.02;mz+=(0-ep.z)*0.02;}
+      if(w==='predictable-movement'){mx+=predVx*wStr*40;mz+=predVz*wStr*40;}
+      if(w==='stationary'||w==='static-target'){mx+=nPx*wStr;mz+=nPz*wStr;}
+      if(w==='left-bias'){mx+=pX*wStr*0.5;mz+=pZ*wStr*0.5;}
+      if(w==='right-bias'){mx-=pX*wStr*0.5;mz-=pZ*wStr*0.5;}
+      if(w==='no-dash-usage'){mx+=nPx*wStr*0.5;mz+=nPz*wStr*0.5;}
+      if(w==='rear-blind'){const bx=cam.position.x-nPx*12;mx+=(bx-ep.x)*wStr*0.02;mz+=(cam.position.z-nPz*12-ep.z)*wStr*0.02;}
+      if(w==='panic-fire'&&hp<50){mx+=nPx*wStr*1.2;mz+=nPz*wStr*1.2;}
+      if(w==='corner-camper'){mx+=(0-ep.x)*wStr*0.015;mz+=(0-ep.z)*wStr*0.015;}
     });
-    if(cl.pClusters&&cl.pClusters.length>0){mx+=(cl.pClusters[0].x-ep.x)*0.015;mz+=(cl.pClusters[0].z-ep.z)*0.015;}
-  }else{
-    const pdx=cl.predPos.x-ep.x,pdz=cl.predPos.z-ep.z,pdi=Math.sqrt(pdx*pdx+pdz*pdz)||1;
-    mx=(pdx/pdi)*0.55+nPx*0.25;mz=(pdz/pdi)*0.55+nPz*0.25;
-    mx+=pX*(Math.sin(t*4.3)*0.28+Math.sin(t*7.1)*0.2+Math.sin(t*12.7)*0.12+Math.sin(t*17.3)*0.08);
-    mz+=pZ*(Math.cos(t*3.7)*0.28+Math.cos(t*8.3)*0.2+Math.cos(t*11.1)*0.12+Math.cos(t*15.9)*0.08);
-    cl.weakTargets.forEach(w=>{
-      if(w==='predictable-movement'){mx+=predVx*65;mz+=predVz*65;}
-      if(w==='panic-fire'&&hp<60){mx+=nPx*1.4;mz+=nPz*1.4;}
-      if(w==='rear-blind'){const bx=cam.position.x-nPx*14,bz=cam.position.z-nPz*14;mx+=(bx-ep.x)*0.035;mz+=(bz-ep.z)*0.035;}
-      if(w==='stationary'){mx+=nPx*0.6;mz+=nPz*0.6;}
-      if(w==='trigger-discipline'){mx+=pX*Math.sin(t*9)*0.6;mz+=pZ*Math.cos(t*9)*0.6;}
-      if(w==='no-escape-dash'){mx+=nPx*1.5;mz+=nPz*1.5;}
-      if(w==='ignores-melee'&&dist<4){mx+=nPx*1.2;mz+=nPz*1.2;}
-    });
-    if(hp<20){mx+=nPx*2;mz+=nPz*2;}
+    // Range exploit
+    if(cl.pRange>20&&dist>10){mx+=nPx*wStr*0.5;mz+=nPz*wStr*0.5;}
+    if(cl.pRange<8&&dist<14){mx-=nPx*wStr*0.3;mz-=nPz*wStr*0.3;}
+    // Position cluster targeting
+    if(cl.pClusters&&cl.pClusters.length>0){mx+=(cl.pClusters[0].x-ep.x)*wStr*0.01;mz+=(cl.pClusters[0].z-ep.z)*wStr*0.01;}
   }
-  // === MAP KNOWLEDGE: use arena geometry at phase 3+ ===
-  // PUNISH RELOAD: rush the player when they're reloading
-  if(reloading&&cl.adaptPhase>=1&&g.punishReload>0.2){
-    mx+=nPx*g.punishReload*2.5;mz+=nPz*g.punishReload*2.5;
-  }
-  // PUNISH OVERHEAT: push when player overheated
-  if(overheated&&cl.adaptPhase>=2&&g.punishOverheat>0.2){
-    mx+=nPx*g.punishOverheat*2;mz+=nPz*g.punishOverheat*2;
-  }
-  if(cl.adaptPhase>=3){
-    // Seek flank cover for advantageous angle
+  // === GENOME-DRIVEN EXPLOIT + COUNTER-STRAFE + MAP ===
+  // Punish reload/overheat (genome-scaled)
+  if(reloading&&g.punishReload>0.15){mx+=nPx*g.punishReload*2.5;mz+=nPz*g.punishReload*2.5;}
+  if(overheated&&g.punishOverheat>0.15){mx+=nPx*g.punishOverheat*2;mz+=nPz*g.punishOverheat*2;}
+  // Map knowledge (genome.cover + genome.flank)
+  if(g.cover>0.2||g.flank>0.2){
     const fc=MapK.flankCover(ep.x,ep.z,cam.position.x,cam.position.z);
     if(fc){mx+=(fc[0]-ep.x)*0.012*g.flank;mz+=(fc[2]-ep.z)*0.012*g.flank;}
-    // At low HP, retreat toward nearest cover
-    if(cl.hp<cl.maxHp*0.3){const nc=MapK.nearestCover(ep.x,ep.z);if(nc.dist>2){mx+=(nc.pos[0]-ep.x)*0.04;mz+=(nc.pos[2]-ep.z)*0.04;}}
-    // Phase 4+: use ambush spots to cut off player paths
-    if(cl.adaptPhase>=4&&MapK.ambushSpots.length>0){
-      const amb=MapK.ambushSpots[0].pos;mx+=(amb[0]-ep.x)*0.008;mz+=(amb[2]-ep.z)*0.008;}
+    if(cl.hp<cl.maxHp*g.retreatThresh){const nc=MapK.nearestCover(ep.x,ep.z);if(nc.dist>2){mx+=(nc.pos[0]-ep.x)*g.cover*0.06;mz+=(nc.pos[2]-ep.z)*g.cover*0.06;}}
   }
-  // === DIAGNOSTIC MIMIC: blend the enemy behavior that hurt the player most ===
-  if(cl.adaptPhase>=4&&cl.mimicType){
-    const t=clock.elapsedTime,p=new THREE.Vector3(-toP.z,0,toP.x);
-    if(cl.mimicType==='flanker'){
-      // Wide flanking arcs
-      mx+=p.x*Math.sin(t*1.2)*0.6;mz+=p.z*Math.sin(t*1.2)*0.6;
-    }else if(cl.mimicType==='rusher'){
-      // Sprint straight in
-      mx+=toP.x*0.8;mz+=toP.z*0.8;
-    }else if(cl.mimicType==='sniper'){
-      // Keep distance, peek strafe
-      if(dist<15){mx-=toP.x*0.4;mz-=toP.z*0.4;}
-      mx+=p.x*Math.sin(t*1.5)*0.3;mz+=p.z*Math.sin(t*1.5)*0.3;
-    }else if(cl.mimicType==='strafer'){
-      // Wide circle
-      mx+=p.x*0.7;mz+=p.z*0.7;
+  // Diagnostic mimic (genome.archetypeAdapt scales)
+  if(g.archetypeAdapt>0.3&&cl.mimicType){
+    const tM=clock.elapsedTime,pM=new THREE.Vector3(-toP.z,0,toP.x);
+    const mStr=g.archetypeAdapt*ps2;
+    if(cl.mimicType==='flanker'){mx+=pM.x*Math.sin(tM*1.2)*mStr;mz+=pM.z*Math.sin(tM*1.2)*mStr;}
+    else if(cl.mimicType==='rusher'){mx+=toP.x*mStr;mz+=toP.z*mStr;}
+    else if(cl.mimicType==='sniper'){if(dist<15){mx-=toP.x*mStr*0.5;mz-=toP.z*mStr*0.5;}mx+=pM.x*Math.sin(tM*1.5)*mStr*0.5;mz+=pM.z*Math.sin(tM*1.5)*mStr*0.5;}
+    else if(cl.mimicType==='strafer'){mx+=pM.x*mStr*0.8;mz+=pM.z*mStr*0.8;}
+  }
+  // Counter-strafe (genome.counterStrafe)
+  if(g.counterStrafe>0.15){
+    const csVx=cam.position.x-(cl.lastPPos?.x||cam.position.x);
+    const csVz=cam.position.z-(cl.lastPPos?.z||cam.position.z);
+    const csDot=csVx*(-toP.z)+csVz*toP.x;
+    const csDir=csDot>0.02?1:(csDot<-0.02?-1:0);
+    if(csDir!==0&&csDir!==cl.lastPlayerStrafeDir){cl.lastPlayerStrafeDir=csDir;cl.counterStrafeTimer=0;}
+    cl.counterStrafeTimer+=dt;
+    if(csDir!==0){
+      const csStr=g.counterStrafe*(0.5+ps2*0.7);
+      if(cl.pStrafeRhythm>0.5&&cl.counterStrafeTimer>cl.pStrafeHold*0.7){
+        mx+=(-toP.z)*(-csDir)*csStr;mz+=toP.x*(-csDir)*csStr;
+      }else{mx+=(-toP.z)*csDir*csStr;mz+=toP.x*csDir*csStr;}
+    }
+    if(cl.pStrafePattern>0&&A.strafeHistory.length>cl.pStrafePattern){
+      const pred=A.strafeHistory[A.strafeHistory.length-cl.pStrafePattern]?.dir||0;
+      mx+=(-toP.z)*pred*g.counterStrafe*0.4;mz+=toP.x*pred*g.counterStrafe*0.4;
     }
   }
+  // Anti-flick (genome.flickCounter)
+  if(cl.pIsFlicker&&g.flickCounter>0.2&&Math.random()<g.flickCounter*0.12){
+    mx+=(Math.random()-0.5)*g.flickCounter*5;mz+=(Math.random()-0.5)*g.flickCounter*5;
+  }
+  // Reload timing predict (genome.reloadPredict)
+  if(g.reloadPredict>0.15&&cl.pReloadInterval>0){
+    const tSR=now-(A.reloadT.length>0?A.reloadT[A.reloadT.length-1]:0);
+    if(tSR>cl.pReloadInterval*0.75&&tSR<cl.pReloadInterval*1.3){mx+=toP.x*g.reloadPredict*0.6;mz+=toP.z*g.reloadPredict*0.6;}
+  }
+
+
   const ml=Math.sqrt(mx*mx+mz*mz)||1;
   ep.x+=mx/ml*cl.speed*dt;ep.z+=mz/ml*cl.speed*dt;
 
@@ -1770,25 +1969,25 @@ function updateCloneAI(cl,dt,dist,toP){
     const str=3*(0.3+iqFactor*0.7)*(1+cl.adaptPhase*0.15)*dt;
     ep.x+=pX2.x*dDir*str;ep.z+=pX2.z*dDir*str;
   }
-  // 2. Aim prediction: dodge when player aims at clone
-  if(cl.adaptPhase>=1){
+  // 2. Aim prediction: genome.dodgeIntensity drives
+  if(g.dodgeIntensity>0.15){
     const aimX=-Math.sin(yaw),aimZ=-Math.cos(yaw);
     const toCl=new THREE.Vector3(ep.x-cam.position.x,0,ep.z-cam.position.z).normalize();
     const aimDot=aimX*toCl.x+aimZ*toCl.z;
     if(aimDot>0.85){
       const urg=(aimDot-0.85)*6.7;
       const dDir=Math.sin(now*5.1+cl.iq*0.07)>0?1:-1;
-      ep.x+=(-aimZ)*dDir*urg*iqFactor*(2+cl.adaptPhase)*dt;
-      ep.z+=aimX*dDir*urg*iqFactor*(2+cl.adaptPhase)*dt;
+      ep.x+=(-aimZ)*dDir*urg*iqFactor*g.dodgeIntensity*3*dt;
+      ep.z+=aimX*dDir*urg*iqFactor*g.dodgeIntensity*3*dt;
     }
   }
-  // 3. Velocity jitter at phase 2+
-  if(cl.adaptPhase>=2){
-    const j=iqFactor*0.5*(1+cl.adaptPhase*0.2)*dt;
+  // 3. Velocity jitter: genome.strafeChaos drives
+  if(g.strafeChaos>0.25){
+    const j=iqFactor*g.strafeChaos*0.4*dt;
     ep.x+=(Math.random()-0.5)*j;ep.z+=(Math.random()-0.5)*j;
   }
-  // 4. Post-hit juke
-  if(now-lastCloneHitTime<0.4&&cl.adaptPhase>=1){
+  // 4. Post-hit juke: genome.dodgeReact drives
+  if(now-lastCloneHitTime<0.4&&g.dodgeReact>0.15){
     ep.x+=(Math.random()-0.5)*iqFactor*3*dt;
     ep.z+=(Math.random()-0.5)*iqFactor*3*dt;
   }
@@ -1807,71 +2006,86 @@ function updateCloneAI(cl,dt,dist,toP){
 
   // === SHOOTING (25 dmg — same as player body shot) ===
   const canShoot=!cl.cloneReloading&&!cl.cloneOverheated&&cl.cloneAmmo>0;
-  const fireInt=[0.2,0.15,0.12,0.1,0.1,0.1][Math.min(cl.adaptPhase,5)];
+  const phaseScale=cl.adaptPhase/5; // 0-1 normalized phase
+  const fireInt=Math.max(0.08,0.25-g.fireAgg*0.18-phaseScale*0.05); // genome drives fire rate
   if(canShoot&&now-cl.lastShot>fireInt&&dist<40){
     cl.lastShot=now;cl.cloneAmmo--;cl.shotsFiredByClone++;
     cl.cloneHeat=Math.min(100,cl.cloneHeat+4);
     if(cl.cloneHeat>=100)cl.cloneOverheated=true;
-    const bAcc=[0.22,0.30,0.38,0.46,0.52,0.58][Math.min(cl.adaptPhase,5)];
-    let hc=bAcc+cl.learnRate*0.1+Math.min(0.1,cl.consHits*0.02);
+    const bAcc=Math.min(0.6,g.aimSkill*0.45+phaseScale*0.12+cl.learnRate*0.06); // genome drives accuracy
+    let hc=bAcc+Math.min(0.1,cl.consHits*0.02);
     hc*=Math.max(0.3,1-dist/45);
-    if(cl.adaptPhase>=3)hc+=0.05;
-    if(reloading)hc+=0.12; // easy target while reloading
-    if(overheated)hc+=0.08; // can't shoot back
-    if(cl.pPred>0.3&&cl.adaptPhase>=2)hc+=cl.pPred*0.1;
+    if(reloading)hc+=g.punishReload*0.15; // genome-scaled exploit
+    if(overheated)hc+=g.punishOverheat*0.1;
+    // Counter flickers: time shots between flicks
+    if(cl.pIsFlicker&&g.flickCounter>0.2){
+      const tSinceFlick=A.flickEvents.length>0?(now-A.flickEvents[A.flickEvents.length-1].t):999;
+      if(tSinceFlick>0.3&&tSinceFlick<0.8)hc+=0.08; // shoot during flick recovery
+    }
+    if(cl.pPred>0.3&&g.predictW>0.2)hc+=cl.pPred*g.predictW*0.15;
     hc+=cl.versatility*0.01;
-    // Smart heat management at phase 3+
-    if(cl.adaptPhase>=3&&cl.cloneHeat>75){/* skip shot to cool */}
-    // FULL AUTO BURST: spray when close or player is predictable
-    else if(cl.adaptPhase>=2&&(dist<8||cl.pPred>0.4)&&cl.cloneHeat<60){
+    // Smart heat management: genome.burstControl
+    if(g.burstControl>0.4&&cl.cloneHeat>70+g.burstControl*20){/* skip shot to cool */}
+    // FULL AUTO: genome.fireAgg controls spray threshold
+    else if(g.fireAgg>0.5&&(dist<8||cl.pPred>0.4)&&cl.cloneHeat<60){
       // Full auto — double fire rate, slight accuracy penalty
-      if(Math.random()<hc*0.85){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;}
+      if(Math.random()<hc*0.85){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;cl.fightDmgDealt+=cl.damage;}
       else{cl.consHits=0;cl.consMiss++;}
       cl.lastShot=now-fireInt*0.5; // fire again sooner
     }
-    else if(Math.random()<hc){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;}
-    else{cl.consHits=0;cl.consMiss++;}
+    else if(Math.random()<hc){playerDmg(cl.damage,ep);cl.consHits++;cl.consMiss=0;cl.shotsHitByClone++;cl.fightDmgDealt+=cl.damage;}
+    else{cl.consHits=0;cl.consMiss++;cl.fightDodges++;}
     spawnFlash(ep.clone().add(new THREE.Vector3(0,1.1,0)).add(toP.clone().multiplyScalar(0.6)),cl.adaptPhase>=3?0x00ffc8:0x008866);
   }
   // Reload: tactical at p2+, panic at p0-1
   if(cl.cloneAmmo<=0&&!cl.cloneReloading){cl.cloneReloading=true;cl.cloneReloadTimer=1.3;}
-  else if(cl.adaptPhase>=2&&cl.cloneAmmo<8&&!cl.cloneReloading&&now-cl.lastShot>0.6){cl.cloneReloading=true;cl.cloneReloadTimer=1.3;}
+  else if(g.burstControl>0.3&&cl.cloneAmmo<8&&!cl.cloneReloading&&now-cl.lastShot>0.6){cl.cloneReloading=true;cl.cloneReloadTimer=1.3;}
 
-  // === DASH (identical: 3s cd, same speed/dur) ===
-  if(cl.cloneDashCd<=0&&cl.adaptPhase>=0){
+  // === DASH — genome.dashDodge + dashAgg drive all decisions ===
+  if(cl.cloneDashCd<=0){
     let doDash=false,ddx=0,ddz=0;
-    // REACTIVE DODGE DASH: when clone takes damage, dash sideways
-    if(cl.hp<cl.maxHp&&now-lastCloneHitTime<0.15&&Math.random()<0.3+iqFactor*0.3){
+    // Reactive dodge: genome.dashDodge controls threshold
+    if(cl.hp<cl.maxHp&&now-lastCloneHitTime<0.15&&Math.random()<g.dashDodge*0.6+iqFactor*0.2){
       doDash=true;ddx=pX*(Math.random()>0.5?1:-1);ddz=pZ*(Math.random()>0.5?1:-1);
     }
-    // AIM DODGE DASH: when player is aiming dead-on, dash to break tracking
+    // Aim dodge: genome.dodgeReact controls sensitivity
     const aimX2=-Math.sin(yaw),aimZ2=-Math.cos(yaw);
     const toCl2=new THREE.Vector3(ep.x-cam.position.x,0,ep.z-cam.position.z).normalize();
     const aimPrecision=aimX2*toCl2.x+aimZ2*toCl2.z;
-    if(aimPrecision>0.95&&cl.adaptPhase>=1&&Math.random()<0.03+iqFactor*0.04){
+    if(aimPrecision>0.95&&Math.random()<g.dodgeReact*0.06+iqFactor*0.03){
       doDash=true;ddx=-aimZ2*(Math.random()>0.5?1:-1);ddz=aimX2*(Math.random()>0.5?1:-1);
     }
-    // OFFENSIVE DASH: close distance for burst
-    if(cl.adaptPhase>=2&&dist>6&&dist<15&&Math.random()<0.03){doDash=true;ddx=nPx;ddz=nPz;cl.comboState='dash';cl.comboTimer=0.8;}
-    // FLANKING DASH: at high phase, dash to the side to reposition
-    if(cl.adaptPhase>=3&&Math.random()<0.02){doDash=true;ddx=pX*(Math.random()>0.5?1:-1);ddz=pZ*(Math.random()>0.5?1:-1);}
-    if(cl.adaptPhase>=4&&Math.random()<0.03){doDash=true;
-      if(cl.pDodge.includes('left')){ddx=pX;ddz=pZ;}else if(cl.pDodge.includes('right')){ddx=-pX;ddz=-pZ;}else{ddx=nPx;ddz=nPz;}}
-    if(cl.adaptPhase>=5&&Math.random()<0.035){doDash=true;ddx=predVx*15+nPx*0.5;ddz=predVz*15+nPz*0.5;}
-    if(doDash){cl.cloneDashCd=cl.cloneDashCD_MAX;const dl=Math.sqrt(ddx*ddx+ddz*ddz)||1;
+    // Offensive dash: genome.dashAgg controls
+    if(dist>6&&dist<15&&Math.random()<g.dashAgg*0.05){
+      doDash=true;ddx=nPx;ddz=nPz;cl.comboState='dash';cl.comboTimer=0.8;
+    }
+    // Flanking dash
+    if(g.flank>0.3&&Math.random()<g.flank*0.03){
+      doDash=true;ddx=pX*(Math.random()>0.5?1:-1);ddz=pZ*(Math.random()>0.5?1:-1);
+    }
+    // Predictive dash: genome.predictW controls
+    if(g.predictW>0.4&&Math.random()<g.predictW*0.04){
+      doDash=true;ddx=predVx*15+nPx*0.5;ddz=predVz*15+nPz*0.5;
+    }
+    if(doDash){cl.cloneDashCd=cl.cloneDashCD_MAX;cl.fightDashesUsed++;const dl=Math.sqrt(ddx*ddx+ddz*ddz)||1;
       ep.x+=ddx/dl*DASH_SPD*DASH_DUR;ep.z+=ddz/dl*DASH_SPD*DASH_DUR;
       ep.x=THREE.MathUtils.clamp(ep.x,-38,38);ep.z=THREE.MathUtils.clamp(ep.z,-38,38);ep.y=0;
       spawnFlash(ep.clone().add(new THREE.Vector3(0,1,0)),0x00aaff);}
   }
-  // === GRENADE (identical: 5s cd, same damage) ===
-  if(cl.cloneNadeCd<=0&&cl.adaptPhase>=1){
+  // === GRENADE — genome.nadePressure + nadeTiming drive decisions ===
+  if(cl.cloneNadeCd<=0&&g.nadePressure>0.15){
     let doNade=false;let nt=cam.position.clone();
-    if(cl.adaptPhase===1&&dist<18&&dist>5&&Math.random()<0.015){doNade=true;}
-    if(cl.adaptPhase===2&&dist<18&&dist>4&&Math.random()<0.02){doNade=true;nt.x+=predVx*6;nt.z+=predVz*6;}
-    if(cl.adaptPhase>=3&&dist<22&&dist>3&&Math.random()<0.025){doNade=true;nt.x+=predVx*8;nt.z+=predVz*8;}
-    if(cl.adaptPhase>=4&&cl.pClusters&&cl.pClusters.length>0&&Math.random()<0.01){doNade=true;const fv=cl.pClusters[Math.floor(Math.random()*Math.min(cl.pClusters.length,3))];nt.set(fv.x,0,fv.z);}
-    if(cl.adaptPhase>=5&&Math.random()<0.022){doNade=true;nt.x=cam.position.x+predVx*15;nt.z=cam.position.z+predVz*15;}
-    if(doNade){cl.cloneNadeCd=cl.cloneNadeCD_MAX;nt.y=0;spawnGrenade(ep.clone().add(new THREE.Vector3(0,1.5,0)),nt,true);}
+    // Basic throw: frequency scaled by genome
+    if(dist<20&&dist>4&&Math.random()<g.nadeTiming*0.03){
+      doNade=true;
+      // Lead target based on genome.predictW
+      nt.x+=predVx*(4+g.predictW*8);nt.z+=predVz*(4+g.predictW*8);
+    }
+    // Cluster targeting: genome.weakExploit drives use of position data
+    if(g.weakExploit>0.3&&cl.pClusters&&cl.pClusters.length>0&&Math.random()<g.weakExploit*0.015){
+      doNade=true;const fv=cl.pClusters[Math.floor(Math.random()*Math.min(cl.pClusters.length,3))];nt.set(fv.x,0,fv.z);
+    }
+    if(doNade){cl.cloneNadeCd=cl.cloneNadeCD_MAX;cl.fightNadesUsed++;nt.y=0;spawnGrenade(ep.clone().add(new THREE.Vector3(0,1.5,0)),nt,true);}
   }
   // === MELEE (identical: 2s cd, 60 dmg, 3.5 range) ===
   if(false){
@@ -1882,11 +2096,61 @@ function updateCloneAI(cl,dt,dist,toP){
     if(doMelee){cl.cloneMeleeCd=cl.cloneMeleeCD_MAX;playerDmg(cl.cloneMeleeDmg,ep);
       spawnHitParts(cam.position.clone().add(new THREE.Vector3(0,0.5,-0.3)),0xff00aa);cl.comboState='';}
   }
-  // === LIVE ADAPTATION: adjust genome in real-time ===
-  if(cl.adaptPhase>=3&&cl.shotsFiredByClone>10){
-    const la=cl.shotsHitByClone/cl.shotsFiredByClone;
-    if(la<0.2&&g.engDist>5)g.engDist-=0.15*dt;
-    if(la>0.4)g.engDist+=0.08*dt;
+  // === LIVE DOMINANCE ADAPTATION ===
+  cl.dominanceTimer+=dt;
+  if(cl.dominanceTimer>1.5&&cl.shotsFiredByClone>5){
+    cl.dominanceTimer=0;
+    const cloneAcc=cl.shotsFiredByClone>0?cl.shotsHitByClone/cl.shotsFiredByClone:0;
+    const playerAcc=A.shotsFired>0?A.shotsHit/A.shotsFired:0;
+    const hpRatio=cl.hp/Math.max(hp,1); // >1 = clone has more HP
+    const dmgRatio=cl.fightDmgDealt/Math.max(cl.fightDmgTaken,1); // >1 = clone dealing more
+    const evasionScore=cl.fightHitsTaken>0?cl.shotsFiredByClone/cl.fightHitsTaken:5; // shots fired per hit taken
+
+    // Determine dominant stat
+    let best='none',bestVal=0;
+    if(cloneAcc>playerAcc&&cloneAcc>bestVal){best='accuracy';bestVal=cloneAcc;}
+    if(evasionScore>2&&evasionScore>bestVal){best='evasion';bestVal=evasionScore;}
+    if(dmgRatio>1.3&&dmgRatio>bestVal){best='aggression';bestVal=dmgRatio;}
+    if(hpRatio>1.5&&hpRatio>bestVal){best='control';bestVal=hpRatio;}
+    cl.dominantStat=best;
+
+    const rate=g.adaptSpeed*0.15;
+    if(best==='accuracy'){
+      // Winning accuracy → play tighter, hold range, keep shooting
+      g.engDist+=(cl.pRange-g.engDist)*rate*0.3; // drift toward player's preferred range (where we're hitting)
+      g.fireAgg=Math.min(1,g.fireAgg+rate*0.2); // shoot faster
+      g.strafeA=Math.max(0.2,g.strafeA-rate*0.1); // less wild strafe, steadier aim
+    }
+    else if(best==='evasion'){
+      // Winning evasion → amplify dodge, play patient, let them miss
+      g.strafeChaos=Math.min(1.5,g.strafeChaos+rate*0.3);
+      g.dodgeIntensity=Math.min(1.5,g.dodgeIntensity+rate*0.2);
+      g.counterStrafe=Math.min(1.5,g.counterStrafe+rate*0.2);
+      g.approachAgg=Math.max(0.1,g.approachAgg-rate*0.15); // stay back, let them whiff
+    }
+    else if(best==='aggression'){
+      // Winning DPS → push harder, close distance, full pressure
+      g.approachAgg=Math.min(1.5,g.approachAgg+rate*0.3);
+      g.pressAgg=Math.min(1.5,g.pressAgg+rate*0.2);
+      g.dashAgg=Math.min(1,g.dashAgg+rate*0.15);
+      g.nadeTiming=Math.min(1,g.nadeTiming+rate*0.15);
+    }
+    else if(best==='control'){
+      // HP advantage → play safe, force trades, exploit mistakes
+      g.punishReload=Math.min(1.5,g.punishReload+rate*0.2);
+      g.punishOverheat=Math.min(1.5,g.punishOverheat+rate*0.2);
+      g.weakExploit=Math.min(1.5,g.weakExploit+rate*0.2);
+      g.retreatThresh=Math.max(0.05,g.retreatThresh-rate*0.1); // less retreating when ahead
+    }
+    else{
+      // Losing everything → shake up strategy, increase chaos
+      g.strafeChaos=Math.min(1.5,g.strafeChaos+rate*0.2);
+      g.strafeSpeed=Math.min(2,g.strafeSpeed+rate*0.15);
+      g.flickCounter=Math.min(1,g.flickCounter+rate*0.15);
+      // Try closing distance if far, backing off if close
+      if(dist>g.engDist+5)g.approachAgg=Math.min(1.5,g.approachAgg+rate*0.2);
+      else if(dist<g.engDist-5)g.approachAgg=Math.max(0.1,g.approachAgg-rate*0.2);
+    }
   }
 }
 
@@ -1922,8 +2186,9 @@ function playerShoot(){
       if(rayY>=-0.2&&rayY<=2.4){
         const isH=rayY>1.8;
         const dmg=isH?55:25;e.hp-=dmg;hit=true;hs=isH;hd=projH;A.dmgD+=dmg;
-        if(e.type==='clone')lastCloneHitTime=clock.elapsedTime;
+        if(e.type==='clone'){lastCloneHitTime=clock.elapsedTime;e.fightDmgTaken+=dmg;e.fightHitsTaken++;}
         showHitMarker(isH);
+        showDmgNum(dmg,ePos.clone().add(new THREE.Vector3(0,isH?2.2:1.5,0)),'dealt');
         // Target priority tracking
         if(e.id!==A.lastTargetId){A.targetSwitches++;A.lastTargetId=e.id;}
         const wd2=A.waveData[A.currentWave];
@@ -1948,6 +2213,11 @@ function playerShoot(){
   // Signal to clone: player fired
   lastPlayerShotTime=clock.elapsedTime;
   lastPlayerAimDir={x:-Math.sin(yaw),z:-Math.cos(yaw)};
+  // Tag recent flick as hit/miss
+  if(A.flickEvents.length>0){
+    const last=A.flickEvents[A.flickEvents.length-1];
+    if(clock.elapsedTime-last.t<0.3){last.hit=hit;last.dist=hd;if(hit&&hs)A.flickKills++;}
+  }
   // Per-wave diagnostic tracking
   const wd=A.waveData[A.currentWave];
   if(wd){wd.shotsF++;if(hit)wd.shotsH++;}
@@ -1996,8 +2266,8 @@ function doMelee(){return;}
 
 function playerDmg(dmg,fromPos){
   hp=Math.max(0,hp-dmg);A.dmgT+=dmg;
-  // Per-wave damage tracking
   const wd=A.waveData[A.currentWave];if(wd)wd.dmgTaken+=dmg;
+  showDmgNum(dmg,fromPos.clone?fromPos.clone().add(new THREE.Vector3(0,1,0)):cam.position.clone(),'taken');
   const ang=Math.atan2(fromPos.z-cam.position.z,fromPos.x-cam.position.x)-yaw;
   A.dmgTH.push({t:clock.elapsedTime,amt:dmg,px:cam.position.x,pz:cam.position.z,a:ang});
   A.lastDmgT=clock.elapsedTime;
@@ -2031,6 +2301,7 @@ function killE(e){
     Sim.target=Sim.simCount+2000;Sim.running=true;Sim.next();
     announce(`ECHO ${endlessKills} DESTROYED`);
     document.getElementById('endlessKills').textContent=`${endlessKills} ECHOES DESTROYED`;
+    Save.saveGameState(); // persist evolution progress
     setTimeout(()=>spawnEndlessClone(),3000);
     return;
   }
@@ -2040,7 +2311,10 @@ function killE(e){
 
 function reload(){if(reloading||ammo===MX)return;reloading=true;A.reloadT.push(clock.elapsedTime);
   if(ammo===0)A.panicRld++;else A.tacRld++;
-  A.reloadAmmoLeft.push(ammo); // track how many bullets were left
+  A.reloadAmmoLeft.push(ammo);
+  const nearEnemy=enemies.some(e=>e.hp>0&&e.mesh.position.distanceTo(cam.position)<15);
+  if(nearEnemy)A.reloadDuringCombat++;else A.reloadDuringSafe++;
+  if(A.reloadT.length>=2)A.avgReloadInterval=(clock.elapsedTime-A.reloadT[0])/A.reloadT.length;
   const wd=A.waveData[A.currentWave];if(wd){wd.reloads=(wd.reloads||0)+1;if(ammo===0)wd.panicReloads=(wd.panicReloads||0)+1;}
   document.getElementById('ammoC').textContent='...';
   setTimeout(()=>{ammo=MX;reloading=false;updateAmmo();},1300);}
@@ -2161,7 +2435,8 @@ function showCloneWarn(){
 }
 
 function showAnalytics(){
-  compA();const a=A,tt=a.tMove+a.tStill||1;
+  compA();Save.saveGameState(); // persist player data
+  const a=A,tt=a.tMove+a.tStill||1;
   const dp=a.posH.length+a.aimH.length+a.shotT.length+a.dmgTH.length+a.velH.length+a.dashTimestamps.length+a.grenadeTimestamps.length+a.meleeTimestamps.length;
   document.getElementById('analyticContent').innerHTML=`
     <div class="sg"><h3>DATA POINTS: ${dp}</h3></div>
@@ -2170,7 +2445,9 @@ function showAnalytics(){
     <div class="sr"><span class="sl">Dodge Pattern</span><span class="sv d">${a.dodgePattern.toUpperCase()}</span></div>
     <div class="sr"><span class="sl">Aim Profile</span><span class="sv d">${a.aimProfile.toUpperCase()}</span></div>
     <div class="sr"><span class="sl">Preferred Range</span><span class="sv">${a.avgEngDist.toFixed(1)}m</span></div>
-    <div class="sr"><span class="sl">Reloads</span><span class="sv">${a.reloadT.length} (${a.panicRld} panic / ${a.tacRld} tactical)</span></div>
+    <div class="sr"><span class="sl">Reloads</span><span class="sv">${a.reloadT.length} (${a.panicRld} panic / ${a.tacRld} tac / ${a.reloadDuringCombat} in combat)</span></div>
+    <div class="sr"><span class="sl">Flick Shots</span><span class="sv">${a.flickEvents.length} (${a.flickAccuracy?(a.flickAccuracy*100).toFixed(0):0}% acc / ${a.flickKills} kills)</span></div>
+    <div class="sr"><span class="sl">Strafe</span><span class="sv">${a.avgStrafeHoldTime?a.avgStrafeHoldTime.toFixed(2)+'s hold':'?'} / ${a.strafeRhythm?(a.strafeRhythm*100).toFixed(0):0}% rhythm${a.strafePatternLen?' / pattern:'+a.strafePatternLen:''}</span></div>
     </div>
     <div class="sg"><h3>WEAKNESSES FOUND: ${a.weaknesses.length}</h3>
     ${a.weaknesses.map(w=>`<div class="sr"><span class="sv d">⚠ ${w.toUpperCase()}</span></div>`).join('')}
@@ -2206,9 +2483,10 @@ function launchClone(){
 
 function gameOver(won){
   GS='result';Sim.running=false;compA();
+  Save.saveGameState(); // persist across sessions
   document.getElementById('rTitle').textContent=won?'ECHO DEFEATED':'ECHO PREVAILS';
   document.getElementById('rSub').textContent=won?'You defied the machine. Your echo could not contain you.':'Your echo mastered every angle. It knew you better than yourself.';
-  document.getElementById('rStats').textContent=`Score: ${score} | Accuracy: ${A.acc.toFixed(1)}% | Style: ${A.playstyle.toUpperCase()}\nSims: ${Sim.simCount} | IQ: ${Sim.iq} | Versatility: ${Sim.versatility}/20\nGenome vs Genome: ${Sim.totalGvG} | Dynasty: ${Sim.dynasty.length} champions\nDashes: ${A.dashCount} | Grenades: ${A.grenadeCount}\nWeaknesses: ${A.weaknesses.length} | Generations: ${Sim.gen}`;
+  document.getElementById('rStats').textContent=`Score: ${score} | Accuracy: ${A.acc.toFixed(1)}% | Style: ${A.playstyle.toUpperCase()}\nSims: ${Sim.simCount} | IQ: ${Sim.iq} | Versatility: ${Sim.versatility}/20\nGvG: ${Sim.totalGvG} | Dynasty: ${Sim.dynasty.length} | Gen: ${Sim.gen}\nDashes: ${A.dashCount} | Grenades: ${A.grenadeCount} | Reloads: ${A.reloadT.length}\nWeaknesses: ${A.weaknesses.slice(0,5).join(', ').toUpperCase()||'NONE'}\nGames Played: ${Save._gamesPlayed}`;
   document.getElementById('resultScr').style.display='flex';
   // Show retry button if player lost
   const rb=document.getElementById('retryBtn');
@@ -2243,7 +2521,9 @@ function startEndlessFromTitle(){
     Sim.playerModel={avgSpeed:4,dodge:'alternating',strafeRatio:1,accuracy:0.35,avgEngDist:12,reaction:1.8,
       aggression:0.5,fireRate:3,burstLen:3,movePred:0.3,prefPos:[],weaknesses:['balanced'],coverUse:0.3,
       aimProfile:'tracking',posClusters:[],dirChangeRate:2,dashRate:0.15,nadeRate:0.1,meleeRate:0.1,
-      dashBias:0.5,combos:[],meleeAfterDash:0,reloadRate:0.1,panicReloadRatio:0.5,avgAmmoAtReload:0};
+      dashBias:0.5,combos:[],meleeAfterDash:0,reloadRate:0.1,panicReloadRatio:0.5,avgAmmoAtReload:0,
+      reloadInCombatRatio:0.5,avgReloadInterval:8,flickAccuracy:0,flickRate:0,isFlicker:false,
+      avgStrafeHoldTime:1,strafeRhythm:0,strafePatternLen:0,strafeSwitchRate:1};
     MapK.init();Sim.running=true;Sim.start();
     endlessMode=true;endlessKills=0;endlessHpBonus=0;
     document.getElementById('endlessHud').style.display='block';
@@ -2443,7 +2723,11 @@ function update(){
 
   if(!waveActive&&enemies.length===0&&waveCd<=0){
     try{
-    if(wave<wCfg.length-1){waveActive=true;waveCd=2.5;hp=100;updateHp();startWave(wave+1);}
+    if(wave<wCfg.length-1){waveActive=true;waveCd=2.5;hp=100;updateHp();
+      // Wave complete flash
+      const ov=document.getElementById('dashOv');ov.style.background='radial-gradient(ellipse at center,rgba(0,255,200,0.1),transparent 60%)';
+      ov.style.opacity=1;setTimeout(()=>ov.style.opacity=0,300);
+      startWave(wave+1);}
     else if(wave===wCfg.length-1&&!cloneActive){waveActive=true;compA();Sim.buildPlayerModel();if(!Sim.running)Sim.start();showCloneWarn();}
     }catch(err){console.error('Wave transition error:',err);waveActive=true;}
   }
@@ -2462,6 +2746,33 @@ function startGame(){
 }
 addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();R.setSize(innerWidth,innerHeight);});
 (function tl(){if(GS==='title'){R.render(scene,cam);requestAnimationFrame(tl);}})();
+// Restore save data on load
+Save.restore().then(async restored=>{
+  if(restored){
+    // Start background training with restored genome + saved player profile
+    const save=await Save.load();
+    if(save&&save.player){
+      // Build a player model from saved data so echo can train before game starts
+      Sim.playerModel={avgSpeed:4,dodge:save.player.dodgePattern||'alternating',
+        strafeRatio:1,accuracy:(save.player.accuracy||30)/100,
+        avgEngDist:save.player.avgEngDist||12,reaction:1.5,
+        aggression:save.player.aggScore||0.5,fireRate:3,burstLen:3,
+        movePred:save.player.movePred||0.3,prefPos:[],
+        weaknesses:save.player.weaknesses||[],coverUse:0.3,
+        aimProfile:save.player.aimProfile||'tracking',posClusters:[],dirChangeRate:2,
+        dashRate:0.15,nadeRate:0.1,meleeRate:0.1,dashBias:0.5,combos:[],meleeAfterDash:0,
+        reloadRate:0.1,panicReloadRatio:save.player.panicReloadRatio||0.5,avgAmmoAtReload:10,
+        reloadInCombatRatio:0.5,avgReloadInterval:8,
+        flickAccuracy:save.player.flickAccuracy||0,flickRate:0,
+        isFlicker:save.player.isFlicker||false,
+        avgStrafeHoldTime:save.player.avgStrafeHold||1,
+        strafeRhythm:save.player.strafeRhythm||0,
+        strafePatternLen:save.player.strafePattern||0,strafeSwitchRate:1};
+    }
+    Sim.target=Sim.simCount+3000;
+    Sim.running=true;Sim.next();
+  }
+});
 </script>
 </body>
 </html>
